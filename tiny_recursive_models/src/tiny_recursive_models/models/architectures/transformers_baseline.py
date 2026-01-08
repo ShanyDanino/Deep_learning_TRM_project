@@ -119,6 +119,16 @@ class Model_ACTV2ReasoningModule(nn.Module):
 class Model_ACTV2_Inner(nn.Module):
     def __init__(self, config: Model_ACTV2Config) -> None:
         super().__init__()
+        # Added code to adjust to nonograms
+        # Calculate half size of the hid_dim
+        half_hidden = self.config.hidden_size // 2
+        # Encoder for row and column Clues (Index 0 in dimension 3)
+        self.clue_encoder = nn.Sequential(
+            nn.Linear(self.config.clues_max_num, half_hidden),
+            nn.ReLU(),
+            nn.Linear(half_hidden, half_hidden)
+        )        
+        
         self.config = config
         self.forward_dtype = getattr(torch, self.config.forward_dtype)
 
