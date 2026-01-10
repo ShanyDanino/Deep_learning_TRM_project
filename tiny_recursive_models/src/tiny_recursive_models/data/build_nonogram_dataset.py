@@ -16,19 +16,21 @@ cli = ArgParser()
 
 
 class DataProcessConfig(BaseModel):
-    output_dir: str = "data/nonogram_dataset"
     size : int = None
-    dir_path : str = ""
-    config.subsample_size: Optional[int] = None
+    output_dir: str = "data/nonogram_dataset"
+    dir_path : str = os.path.join("sampled_dataset", f"{size}x{size}")
+    max_clue_len: int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
+    subsample_size: Optional[int] = None
     min_difficulty: Optional[int] = None
     num_aug: int = 0
+
     
-def download_files(dir_path):
+def download_files(config: DataProcessConfig):
   rm_dir("sampled_dataset")
   rm_dir("tmp")
 
   # Unzip all zip files
-  zip_files = glob.glob(os.path.join(dir_path, "**/*.zip"), recursive=True)
+  zip_files = glob.glob(os.path.join(config.dir_path, "**/*.zip"), recursive=True)
   for z_file in zip_files:
     try:
       with zipfile.ZipFile(z_file, 'r') as zip_ref:
@@ -60,62 +62,53 @@ def download_files(dir_path):
       except Exception as e:
         print(f"Error loading {filename}: {e}")
 
-      new_dir_path = os.path.join("sampled_dataset", (os.path.basename(os.path.dirname(file_path)))) # sampled_dataset/sizexsize/
-      os.makedirs(new_dir_path, exist_ok=True)
-      np.save(os.path.join(new_dir_path, filename), array)
+      os.makedirs(config.dir_path, exist_ok=True)
+      np.save(os.path.join(config.dir_path, filename), array)
 
   rm_dir("NonoDataset")
 
   print("=" * 90)
-  print("Finish")
+  print(f"Finished downloading dataset with size {config.size}x{config.size}")
   
-def load_files(config.size, config.dir_path, set_name):
-  if config.size == 5:
-    size_dir = "5x5"
-  elif config.size == 10:
-    size_dir = "10x10"
-  elif config.size == 15:
-    size_dir = "15x15"
-  
-  max_clue_len: int = math.ceil(float(config.size)/2) # 5->3, 10->5, 15->8
+def load_files(set_name, config: DataProcessConfig):
   if config.size==5:
-    clues = np.load(os.path.join(config.dir_path, size_dir, "train_combined.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, size_dir, "target_combined.npz.npy"))
-
+    clues = np.load(os.path.join(config.dir_path, "train_combined.npz.npy"))
+    labels = np.load(os.path.join(config.dir_path, "target_combined.npz.npy"))
   elif config.size==10:
-    clues = np.load(os.path.join(config.dir_path, size_dir, f"x_{set_name}_dataset.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, size_dir, f"y_{set_name}_dataset.npz.npy"))
+    clues = np.load(os.path.join(config.dir_path, f"x_{set_name}_dataset.npz.npy"))
+    labels = np.load(os.path.join(config.dir_path, f"y_{set_name}_dataset.npz.npy"))
   elif config.size==15:
-    clues = np.load(os.path.join(config.dir_path, size_dir, f"x_{set_name}_15x15_ok.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, size_dir, f"y_{set_name}_15x15_ok.npz.npy"))
+    clues = np.load(os.path.join(config.dir_path, f"x_{set_name}_15x15_ok.npz.npy"))
+    labels = np.load(os.path.join(config.dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
+      
   nonograms_number = clues.shape[0]
-  parsed_clues  = clues.reshape(nonograms_number,2, config.size, max_clue_len)
-  parsed_labels = labels.reshape(nonograms_number,config.size, config.size)
+  parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.max_clue_len)
+  parsed_labels = labels.reshape(nonograms_number, config.size, config.size)
   
-  return broadcast_nonogram_clues(parsed_clues, config.size, max_clue_len), parsed_labels
+  return broadcast_nonogram_clues(parsed_clues, config), parsed_labels
   
-def broadcast_nonogram_clues(parsed_clues, config.size, max_clue_len):
+def broadcast_nonogram_clues(parsed_clues, config: DataProcessConfig):
     """
-    Transforms raw clues (N, 2, config.size, max_clue_len) 
-    into pixel-wise grid (N, config.size, config.size, 2, max_clue_len).
+    Transforms raw clues (N, 2, config.size, config.max_clue_len) 
+    into pixel-wise grid (N, config.size, config.size, 2, config.max_clue_len).
     """
     # raw_clues index 0: row clues, index 1: col clues
-    row_clues = parsed_clues[:, 0, :, :] # (N, config.size, max_clue_len)
-    col_clues = parsed_clues[:, 1, :, :] # (N, config.size, max_clue_len)
+    row_clues = parsed_clues[:, 0, :, :] # (N, config.size, config.max_clue_len)
+    col_clues = parsed_clues[:, 1, :, :] # (N, config.size, config.max_clue_len)
     
     # Broadcast rows across the horizontal axis (j)
-    # Result: (N, config.size, config.size, max_clue_len)
+    # Result: (N, config.size, config.size, config.max_clue_len)
     row_grid = np.tile(np.expand_dims(row_clues, axis=2), (1, 1, config.size, 1))
     
     # Broadcast columns across the vertical axis (i)
-    # Result: (N, config.size, config.size, max_clue_len)
+    # Result: (N, config.size, config.size, config.max_clue_len)
     col_grid = np.tile(np.expand_dims(col_clues, axis=1), (1, config.size, 1, 1))
     
     # Stack into the final 5D tensor
     return np.stack([row_grid, col_grid], axis=3)
 
 def augment_nonogram(row_clues: np.ndarray, col_clues: np.ndarray, solution: np.ndarray):
-    # Create a random rrotated version of the solution
+    # Create a random rotated version of the solution
     k = np.random.randint(4) # number of times the board will be rotated
     rotated_solution  = np.rot90(solution, k)
     rotated_row_clues = np.rot90(row_clues, k)
@@ -128,10 +121,9 @@ def augment_nonogram(row_clues: np.ndarray, col_clues: np.ndarray, solution: np.
 
     return rotated_row_clues, rotated_col_clues, rotated_solution
 
-def convert_subset(set_name,config: DataProcessConfig):
+def convert_subset(set_name, config: DataProcessConfig):
     # 1. Load and process clues into your requested 5D shape
-    inputs, labels = load_files(config.size, config.dir_path, set_name)
-    
+    inputs, labels = load_files(set_name, config)
 
     # 2. Match Sudoku Subsampling logic
     if set_name == "train" and config.subsample_size is not None:
@@ -187,7 +179,7 @@ def convert_subset(set_name,config: DataProcessConfig):
     }
 
     # 5. Metadata and Save
-    # Note: seq_len is now (config.size * config.size * 2 * max_clue_len)
+    # Note: seq_len is now (config.size * config.size * 2 * config.max_clue_len)
     metadata = PuzzleDatasetMetadata(
         seq_len=config.size*config.size,
         #All possible clues numbers + PAD + Full+Empty
@@ -221,9 +213,8 @@ def convert_subset(set_name,config: DataProcessConfig):
 
 @cli.command(singleton=True)
 def preprocess_data(config: DataProcessConfig):
-
+    # Pulling dataset files
     GITHUB_DATASET_REPO_URL = "https://github.com/josebambu/NonoDataset.git"
-
     dataset_repo_name = GITHUB_DATASET_REPO_URL.split("/")[-1].replace(".git", "")
 
     if not os.path.exists(dataset_repo_name):
@@ -232,7 +223,7 @@ def preprocess_data(config: DataProcessConfig):
     else:
         print(f"Repository '{dataset_repo_name}' already exists. Skipping clone.")
     
-    download_files(os.path.join(dataset_repo_name,f"{size}x{size}"))
+    download_files(config)
     convert_subset("train", config)
     convert_subset("test", config)
 
