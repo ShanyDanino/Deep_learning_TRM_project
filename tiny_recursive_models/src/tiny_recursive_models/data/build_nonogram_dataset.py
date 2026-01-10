@@ -47,7 +47,7 @@ def download_files(config: DataProcessConfig):
     try:
       with zipfile.ZipFile(z_file, 'r') as zip_ref:
         # Extract to the specific folder where the zip is located
-        extract_to_path = os.path.join(config.orig_dataset_path, f"{size}x{size}")
+        extract_to_path = os.path.join(config.orig_dataset_path, f"{config.size}x{config.size}")
         zip_ref.extractall(extract_to_path)
         print(f"Extracted: {os.path.basename(z_file)}")
     except zipfile.BadZipFile:
