@@ -6,15 +6,7 @@ set -e  # Exit on error
 # TinyRecursiveModels (TRM) - Complete Training & Evaluation Pipeline
 # ============================================================================
 # This script provides a one-file solution for building datasets, training,
-# and evaluating TRM models on ARC-AGI, Sudoku, and Maze tasks.
-#
-# Usage: ./speedrun.sh [TASK]
-#   TASK: arc1 | arc2 | sudoku | maze | all
-#
-# Examples:
-#   ./speedrun.sh arc1              # ARC-AGI-1 on all available GPUs
-#   ./speedrun.sh sudoku            # Sudoku on all available GPUs
-#   ./speedrun.sh all               # All tasks on all available GPUs
+# and evaluating TRM models on Nonogram tasks.
 # ============================================================================
 
 # Detect number of GPUs dynamically
@@ -31,14 +23,16 @@ if [ "$DETECTED_GPUS" -eq 0 ]; then
 fi
 
 # Configuration
-TASK=${1:-"arc1"}  # Default to ARC-AGI-1
+SIZE=${1:-5}
+SUBSAMPLE_SIZE=${2:-1000}
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 
 echo "=========================================="
 echo "TinyRecursiveModels Training & Evaluation"
 echo "=========================================="
 echo "Detected GPUs: $DETECTED_GPUS"
-echo "Task: $TASK"
+echo "Nonogram size: $SIZE"
+echo "Subsample size: $SUBSAMPLE_SIZE"
 echo "Using GPUs: $NUM_GPUS"
 echo "=========================================="
 echo ""
@@ -108,42 +102,12 @@ echo ""
 # Step 1: Dataset Building
 # ============================================================================
 
-build_arc1_dataset() {
-    echo "[Step 1/4] Building ARC-AGI-1 dataset..."
-    python -m src.tiny_recursive_models.data.build_arc_dataset \
-        --input-file-prefix kaggle/combined/arc-agi \
-        --output-dir data/arc1concept-aug-1000 \
-        --subsets training evaluation concept \
-        --test-set-name evaluation
-    echo "ARC-AGI-1 dataset built successfully!"
-    echo ""
-}
-
-build_arc2_dataset() {
-    echo "[Step 1/4] Building ARC-AGI-2 dataset..."
-    python -m src.tiny_recursive_models.data.build_arc_dataset \
-        --input-file-prefix kaggle/combined/arc-agi \
-        --output-dir data/arc2concept-aug-1000 \
-        --subsets training2 evaluation2 concept \
-        --test-set-name evaluation2
-    echo "ARC-AGI-2 dataset built successfully!"
-    echo ""
-}
-
-build_sudoku_dataset() {
-    echo "[Step 1/4] Building Sudoku-Extreme dataset..."
-    python -m src.tiny_recursive_models.data.build_sudoku_dataset \
-        --output-dir data/sudoku-extreme-1k-aug-1000 \
-        --subsample-size 1000 \
-        --num-aug 1000
-    echo "Sudoku-Extreme dataset built successfully!"
-    echo ""
-}
-
-build_maze_dataset() {
-    echo "[Step 1/4] Building Maze-Hard 30x30 dataset..."
-    python -m src.tiny_recursive_models.data.build_maze_dataset
-    echo "Maze-Hard dataset built successfully!"
+build_nonogram_dataset() {
+    echo "[Step 1/4] Building Nonogram dataset..."
+    python -m src.tiny_recursive_models.data.build_nonogram_dataset \
+        --size $SIZE \
+        --subsample-size $SUBSAMPLE_SIZE
+    echo "Nonogram with size 5 dataset built successfully!"
     echo ""
 }
 
@@ -151,12 +115,12 @@ build_maze_dataset() {
 # Step 2: Training Functions
 # ============================================================================
 
-train_arc1() {
-    local run_name="pretrain_att_arc1concept_$(date +%Y%m%d_%H%M%S)"
+train_nonogram_mlp() {
+    local run_name="pretrain_mlp_t_nonogram_$(date +%Y%m%d_%H%M%S)"
     local batch_size=1536
     local nproc=$NUM_GPUS
     
-    echo "[Step 2/4] Training ARC-AGI-1 model..."
+    echo "[Step 2/4] Training Nonogram model (MLP-Tiny variant)..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
@@ -165,63 +129,7 @@ train_arc1() {
     torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
         scripts/train.py \
         arch=trm \
-        data_paths="[data/arc1concept-aug-1000]" \
-        arch.L_layers=2 \
-        arch.H_cycles=3 arch.L_cycles=6 \
-        lr=2e-4 weight_decay=0.1 puzzle_emb_lr=1e-2 \
-        global_batch_size=$batch_size lr_warmup_steps=4000 \
-        epochs=100000 eval_interval=5000 checkpoint_every_eval=True \
-        +run_name=${run_name} ema=True
-    
-    echo "ARC-AGI-1 training complete!"
-    LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/arc1concept-aug-1000"
-    echo ""
-}
-
-train_arc2() {
-    local run_name="pretrain_att_arc2concept_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
-    local nproc=$NUM_GPUS
-    
-    echo "[Step 2/4] Training ARC-AGI-2 model..."
-    echo "Run name: $run_name"
-    echo "Batch size: $batch_size"
-    echo "GPUs: $nproc"
-    echo ""
-    
-    torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
-        scripts/train.py \
-        arch=trm \
-        data_paths="[data/arc2concept-aug-1000]" \
-        arch.L_layers=2 \
-        arch.H_cycles=3 arch.L_cycles=6 \
-        lr=2e-4 weight_decay=0.1 puzzle_emb_lr=1e-2 \
-        global_batch_size=$batch_size lr_warmup_steps=4000 \
-        epochs=100000 eval_interval=5000 checkpoint_every_eval=True \
-        +run_name=${run_name} ema=True
-    
-    echo "ARC-AGI-2 training complete!"
-    LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/arc2concept-aug-1000"
-    echo ""
-}
-
-train_sudoku_mlp() {
-    local run_name="pretrain_mlp_t_sudoku_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
-    local nproc=$NUM_GPUS
-    
-    echo "[Step 2/4] Training Sudoku model (MLP-Tiny variant)..."
-    echo "Run name: $run_name"
-    echo "Batch size: $batch_size"
-    echo "GPUs: $nproc"
-    echo ""
-    
-    torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
-        scripts/train.py \
-        arch=trm \
-        data_paths="[data/sudoku-extreme-1k-aug-1000]" \
+        data_paths="[data/nonogram_dataset]" \
         evaluators="[]" \
         epochs=50000 eval_interval=5000 \
         lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
@@ -233,18 +141,18 @@ train_sudoku_mlp() {
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True
     
-    echo "Sudoku training complete!"
+    echo "Nonogram training complete!"
     LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/sudoku-extreme-1k-aug-1000"
+    LAST_DATASET="data/nonogram_dataset"
     echo ""
 }
 
-train_sudoku_att() {
-    local run_name="pretrain_att_sudoku_$(date +%Y%m%d_%H%M%S)"
+train_nonogram_att() {
+    local run_name="pretrain_att_nonogram_$(date +%Y%m%d_%H%M%S)"
     local batch_size=1536
     local nproc=$NUM_GPUS
     
-    echo "[Step 2/4] Training Sudoku model (Attention variant)..."
+    echo "[Step 2/4] Training Nonogram model (Attention variant)..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
@@ -253,7 +161,7 @@ train_sudoku_att() {
     torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
         scripts/train.py \
         arch=trm \
-        data_paths="[data/sudoku-extreme-1k-aug-1000]" \
+        data_paths="[data/nonogram_dataset]" \
         evaluators="[]" \
         epochs=50000 eval_interval=5000 \
         lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
@@ -264,39 +172,9 @@ train_sudoku_att() {
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True
     
-    echo "Sudoku training complete!"
+    echo "Nonogram training complete!"
     LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/sudoku-extreme-1k-aug-1000"
-    echo ""
-}
-
-train_maze() {
-    local run_name="pretrain_att_maze30x30_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
-    local nproc=$NUM_GPUS
-    
-    echo "[Step 2/4] Training Maze-Hard 30x30 model..."
-    echo "Run name: $run_name"
-    echo "Batch size: $batch_size"
-    echo "GPUs: $nproc"
-    echo ""
-    
-    torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
-        scripts/train.py \
-        arch=trm \
-        data_paths="[data/maze-30x30-hard-1k]" \
-        evaluators="[]" \
-        epochs=50000 eval_interval=5000 \
-        lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
-        arch.L_layers=2 \
-        arch.H_cycles=3 arch.L_cycles=4 \
-        global_batch_size=$batch_size lr_warmup_steps=4000 \
-        checkpoint_every_eval=True \
-        +run_name=${run_name} ema=True
-    
-    echo "Maze-Hard training complete!"
-    LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/maze-30x30-hard-1k"
+    LAST_DATASET="data/nonogram_dataset"
     echo ""
 }
 
@@ -366,98 +244,14 @@ smoke_test() {
 # IMPORTANT: when re-running you may comment out the building dataset steps
 # ============================================================================
 
-case $TASK in
-    arc1)
-        build_arc1_dataset
-        train_arc1
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        ;;
-    
-    arc2)
-        build_arc2_dataset
-        train_arc2
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        ;;
-    
-    sudoku)
-        build_sudoku_dataset
-        echo "Choose Sudoku variant: [1] MLP-Tiny  [2] Attention  [3] Both"
-        read -p "Enter choice (1/2/3) [default: 2]: " sudoku_variant
-        sudoku_variant=${sudoku_variant:-2}
-        
-        case $sudoku_variant in
-            1)
-                train_sudoku_mlp
-                ;;
-            2)
-                train_sudoku_att
-                ;;
-            3)
-                train_sudoku_mlp
-                train_sudoku_att
-                ;;
-            *)
-                echo "Invalid choice, using Attention variant"
-                train_sudoku_att
-                ;;
-        esac
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        ;;
-    
-    maze)
-        build_maze_dataset
-        train_maze
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        ;;
-    
-    all)
-        echo "Running all tasks (this will take a VERY long time)..."
-        echo ""
-        
-        build_arc1_dataset
-        build_arc2_dataset
-        build_sudoku_dataset
-        build_maze_dataset
-        
-        train_arc1
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        
-        train_arc2
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        
-        train_sudoku_att
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        
-        train_maze
-        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-        ;;
-    
-    smoke-test)
-        build_maze_dataset
-        smoke_test
-        ;;
-    
-    *)
-        echo "ERROR: Invalid task '$TASK'"
-        echo ""
-        echo "Usage: $0 [TASK]"
-        echo ""
-        echo "Available tasks:"
-        echo "  arc1        - Train and evaluate on ARC-AGI-1"
-        echo "  arc2        - Train and evaluate on ARC-AGI-2"
-        echo "  sudoku      - Train and evaluate on Sudoku-Extreme"
-        echo "  maze        - Train and evaluate on Maze-Hard 30x30"
-        echo "  all         - Run all tasks sequentially"
-        echo "  smoke-test  - Quick verification test with pre-trained model"
-        echo ""
-        echo "Examples:"
-        echo "  $0 arc1"
-        echo "  $0 sudoku"
-        echo "  $0 all"
-        echo "  $0 smoke-test"
-        exit 1
-        ;;
-esac
+build_nonogram_dataset
+train_sudoku_att
+evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+smoke_test
+
+echo "  $0 nonogram"
+echo "  $0 smoke-test"
+exit 1
 
 # ============================================================================
 # Final Summary
@@ -468,7 +262,6 @@ echo "Training and Evaluation Complete!"
 echo "=========================================="
 echo ""
 echo "Summary:"
-echo "  Task: $TASK"
 echo "  GPUs used: $NUM_GPUS"
 if [ -n "$LAST_CHECKPOINT" ]; then
     echo "  Last checkpoint: $LAST_CHECKPOINT"
@@ -482,12 +275,5 @@ echo "  - Review evaluation results in: checkpoints/eval_*/"
 if command -v wandb &> /dev/null; then
     echo "  - View training metrics in W&B dashboard"
 fi
-echo ""
-echo "To evaluate a pretrained model from HuggingFace:"
-echo "  python scripts/run_eval_only.py \\"
-echo "    --checkpoint alphaxiv/trm-model-arc-agi-1/step_259320_arc_ag1_attn_type_h3l4 \\"
-echo "    --dataset data/arc1concept-aug-1000 \\"
-echo "    --apply-ema"
-echo ""
 echo "=========================================="
 
