@@ -14,14 +14,14 @@ from . import load_model_class
 
 # Import optimizer from our vendored implementation
 try:
-    from tiny_recursive_models.training.optimizers import AdamATan2
+    from . import AdamATan2
 except Exception:
     AdamATan2 = None
 
 # Import from trm package
-from tiny_recursive_models.data.puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig
-from tiny_recursive_models.data.common import PuzzleDatasetMetadata
-from tiny_recursive_models.models.sparse_embedding import CastedSparseEmbeddingSignSGD_Distributed
+from . import PuzzleDataset, PuzzleDatasetConfig
+from . import PuzzleDatasetMetadata
+from . import CastedSparseEmbeddingSignSGD_Distributed
 
 
 def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size: int, **kwargs):
