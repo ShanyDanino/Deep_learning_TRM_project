@@ -103,7 +103,7 @@ echo ""
 # ============================================================================
 
 build_nonogram_dataset() {
-    echo "[Step 1/4] Building Nonogram dataset..."
+    echo "[Step 1/3] Building Nonogram dataset..."
     python -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
         --subsample-size $SUBSAMPLE_SIZE
@@ -120,7 +120,7 @@ train_nonogram_mlp() {
     local batch_size=1536
     local nproc=$NUM_GPUS
     
-    echo "[Step 2/4] Training Nonogram model (MLP-Tiny variant)..."
+    echo "[Step 2/3] Training Nonogram model (MLP-Tiny variant)..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
@@ -152,7 +152,7 @@ train_nonogram_att() {
     local batch_size=1536
     local nproc=$NUM_GPUS
     
-    echo "[Step 2/4] Training Nonogram model (Attention variant)..."
+    echo "[Step 2/3] Training Nonogram model (Attention variant)..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
@@ -189,7 +189,7 @@ evaluate_model() {
     local nproc=$NUM_GPUS
     local batch_size=1536
     
-    echo "[Step 3/4] Evaluating model..."
+    echo "[Step 3/3] Evaluating model..."
     echo "Checkpoint: $checkpoint_path"
     echo "Dataset: $dataset_path"
     echo "Output directory: checkpoints/eval_${eval_name}"
@@ -221,25 +221,6 @@ evaluate_model() {
 }
 
 # ============================================================================
-# Step 4: Smoke Test Function (Quick Verification)
-# ============================================================================
-
-smoke_test() {
-    echo "[Step 4/4] Running smoke test (one batch) to verify setup..."
-    echo ""
-    
-    # Use pretrained model from HuggingFace for quick test
-    echo "Testing with pre-trained Maze model from HuggingFace..."
-    python scripts/run_eval_only.py \
-        --checkpoint alphaxiv/trm-model-maze/maze_hard_step_32550 \
-        --dataset data/maze-30x30-hard-1k \
-        --one-batch
-    
-    echo "Smoke test complete!"
-    echo ""
-}
-
-# ============================================================================
 # Main Execution Logic
 # IMPORTANT: when re-running you may comment out the building dataset steps
 # ============================================================================
@@ -247,10 +228,8 @@ smoke_test() {
 build_nonogram_dataset
 train_sudoku_att
 evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
-smoke_test
 
 echo "  $0 nonogram"
-echo "  $0 smoke-test"
 exit 1
 
 # ============================================================================
