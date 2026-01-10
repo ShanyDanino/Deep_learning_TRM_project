@@ -107,7 +107,7 @@ build_nonogram_dataset() {
     python -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
         --subsample-size $SUBSAMPLE_SIZE
-    echo "Nonogram with size 5 dataset built successfully!"
+    echo "Nonogram with size $SIZE X $SIZE dataset built successfully!"
     echo ""
 }
 
@@ -198,7 +198,6 @@ train_nonogram
 evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
 
 echo "  $0 nonogram"
-exit 1
 
 # ============================================================================
 # Final Summary
