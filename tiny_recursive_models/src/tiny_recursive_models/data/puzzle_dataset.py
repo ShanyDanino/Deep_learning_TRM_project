@@ -7,8 +7,8 @@ import pydantic
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 
-from tiny_recursive_models.models.losses import IGNORE_LABEL_ID
-from tiny_recursive_models.data.common import PuzzleDatasetMetadata
+from . import IGNORE_LABEL_ID
+from . import PuzzleDatasetMetadata
 
 from argdantic import ArgParser
 from pydantic import BaseModel

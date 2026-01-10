@@ -1,13 +1,13 @@
 """Training utilities and configuration."""
 
-from tiny_recursive_models.training.config import (
+from . import (
     PretrainConfig,
     TrainState,
     ArchConfig,
     LossConfig,
     EvaluatorConfig,
 )
-from tiny_recursive_models.training.trainer import (
+from . import (
     create_dataloader,
     create_model,
     init_train_state,
@@ -15,7 +15,7 @@ from tiny_recursive_models.training.trainer import (
     compute_lr,
     cosine_schedule_with_warmup_lr_lambda,
 )
-from tiny_recursive_models.training.checkpoint import (
+from . import (
     save_train_state,
     load_checkpoint,
 )

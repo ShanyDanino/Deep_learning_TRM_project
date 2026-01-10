@@ -1,10 +1,10 @@
 """Data utilities and dataset builders."""
 
-from tiny_recursive_models.data.puzzle_dataset import (
+from . import (
     PuzzleDataset,
     PuzzleDatasetConfig,
 )
-from tiny_recursive_models.data.common import (
+from . import (
     PuzzleDatasetMetadata,
 )
 

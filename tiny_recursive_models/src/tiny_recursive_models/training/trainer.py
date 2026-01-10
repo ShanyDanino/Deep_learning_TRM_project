@@ -8,9 +8,9 @@ import torch.distributed as dist
 from torch import nn
 from torch.utils.data import DataLoader
 
-from tiny_recursive_models.training.config import PretrainConfig, TrainState
-from tiny_recursive_models.training.checkpoint import load_checkpoint
-from tiny_recursive_models.utils import load_model_class
+from . import PretrainConfig, TrainState
+from . import load_checkpoint
+from . import load_model_class
 
 # Import optimizer from our vendored implementation
 try:

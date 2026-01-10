@@ -5,11 +5,11 @@ from typing import Optional, List, Any
 import torch
 import torch.distributed as dist
 
-from tiny_recursive_models.training.config import PretrainConfig, TrainState
-from tiny_recursive_models.utils import load_model_class
+from . import PretrainConfig, TrainState
+from . import load_model_class
 
 # Import from original locations (these haven't moved yet)
-from tiny_recursive_models.data.puzzle_dataset import PuzzleDatasetMetadata
+from . import PuzzleDatasetMetadata
 
 
 def create_evaluators(config: PretrainConfig, eval_metadata: PuzzleDatasetMetadata) -> List[Any]:

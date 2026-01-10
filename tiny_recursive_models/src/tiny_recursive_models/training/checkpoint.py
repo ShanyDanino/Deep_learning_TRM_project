@@ -4,7 +4,7 @@ import os
 import torch
 from torch import nn
 
-from tiny_recursive_models.training.config import PretrainConfig, TrainState
+from . import PretrainConfig, TrainState
 
 
 def save_train_state(config: PretrainConfig, train_state: TrainState):

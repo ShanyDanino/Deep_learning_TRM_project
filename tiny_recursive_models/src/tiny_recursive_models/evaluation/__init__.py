@@ -1,10 +1,10 @@
 """Evaluation utilities."""
 
-from tiny_recursive_models.evaluation.evaluator import (
+from . import (
     evaluate,
     create_evaluators,
 )
-from tiny_recursive_models.evaluation.arc import ARC
+from . import ARC
 
 __all__ = [
     "evaluate",
