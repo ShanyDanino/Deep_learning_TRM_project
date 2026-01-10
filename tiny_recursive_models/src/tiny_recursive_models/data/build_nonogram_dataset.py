@@ -42,7 +42,7 @@ def rm_dir(directory_path):
       
 def download_files(config: DataProcessConfig):
   # If size dir already exists, remove it
-  rm_dir(config.size_dir_path)
+  rm_dir(config.processed_dataset_path)
 
   # Unzip all zip files
   zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
@@ -70,13 +70,19 @@ def download_files(config: DataProcessConfig):
         continue
 
       try:
-        data = np.load(file_path, allow_pickle=True)
+        data  = np.load(file_path, allow_pickle=True)
         array = next(iter(data.values()))
-        print(f"Loaded {filename} from  {file_path}")
+        
+        total_in_file       = array.shape[0]
+        num_samples_to_save = min(config.subsample_size, array.shape[0])
+        print(f"Loaded {filename}: {total_in_file} total samples. Sampling {num_samples_to_save}...", flush=True)
+        indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
+        subsampled_array = array[indices]
+        np.save(os.path.join(config.size_dir_path, filename), subsampled_array)
+        print(f"Successfully saved {num_samples_to_save} random samples from {filename}", flush=True)
+
       except Exception as e:
         print(f"Error loading {filename}: {e}")
-
-      np.save(os.path.join(config.size_dir_path, filename), array)
 
   rm_dir(config.dataset_path)
 
@@ -84,16 +90,19 @@ def download_files(config: DataProcessConfig):
   print(f"Finished downloading dataset with size {config.size}x{config.size}")
   
 def load_files(set_name, config: DataProcessConfig):
+  print("Started loading dataset files", flush=True)
   if config.size==5:
     clues = np.load(os.path.join(config.size_dir_path, "train_combined.npz.npy"))
+    print("Loaded clues", flush=True)
     labels = np.load(os.path.join(config.size_dir_path, "target_combined.npz.npy"))
+    print("Loaded labels", flush=True)
   elif config.size==10:
     clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_dataset.npz.npy"))
     labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_dataset.npz.npy"))
   elif config.size==15:
     clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_15x15_ok.npz.npy"))
     labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
-      
+  
   nonograms_number = clues.shape[0]
   parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
   parsed_labels = labels.reshape(nonograms_number, config.size, config.size)
@@ -137,14 +146,6 @@ def augment_nonogram(row_clues: np.ndarray, col_clues: np.ndarray, solution: np.
 def convert_subset(set_name, config: DataProcessConfig):
     # 1. Load and process clues into your requested 5D shape
     inputs, labels = load_files(set_name, config)
-
-    # 2. Match Sudoku Subsampling logic
-    if set_name == "train" and config.subsample_size is not None:
-        total_samples = len(inputs)
-        if config.subsample_size < total_samples:
-            indices = np.random.choice(total_samples, size=config.subsample_size, replace=False)
-            inputs = inputs[indices]
-            labels = labels[indices]
 
     # 3. Generate dataset with indexing
     num_augments = config.num_aug if set_name == "train" else 0
