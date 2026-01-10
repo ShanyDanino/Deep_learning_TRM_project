@@ -4,9 +4,9 @@
 from . import architectures
 
 # Import commonly used utilities
-from . import trunc_normal_init_
-from . import ACTLossHead, IGNORE_LABEL_ID
-from . import EMAHelper
+from .common import trunc_normal_init_
+from .losses import ACTLossHead, IGNORE_LABEL_ID
+from .ema import EMAHelper
 
 __all__ = [
     "architectures",

@@ -7,9 +7,10 @@ import torch.nn.functional as F
 from torch import nn
 from pydantic import BaseModel
 import random
-from . import trunc_normal_init_
-from . import rms_norm, LinearSwish, SwiGLU, Attention, RotaryEmbedding, CosSin, CastedEmbedding, CastedLinear
-from . import CastedSparseEmbedding
+
+from ..common import trunc_normal_init_
+from ..layers import rms_norm, LinearSwish, SwiGLU, Attention, RotaryEmbedding, CosSin, CastedEmbedding, CastedLinear
+from ..sparse_embedding import CastedSparseEmbedding
 
 IGNORE_LABEL_ID = -100
 

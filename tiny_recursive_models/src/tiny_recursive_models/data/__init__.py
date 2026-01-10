@@ -1,10 +1,10 @@
 """Data utilities and dataset builders."""
 
-from . import (
+from .puzzle_dataset import (
     PuzzleDataset,
     PuzzleDatasetConfig,
 )
-from . import (
+from .common import (
     PuzzleDatasetMetadata,
 )
 

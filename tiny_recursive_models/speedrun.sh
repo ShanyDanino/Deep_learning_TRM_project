@@ -55,11 +55,11 @@ fi
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv" ]; then
     echo "Creating Python virtual environment with uv..."
-    uv venv .venv
+    #uv venv .venv
 fi
 
 # Activate virtual environment
-source .venv/bin/activate
+#source .venv/bin/activate
 
 # Install PyTorch with CUDA 12.8 support
 echo "Installing PyTorch (CUDA 12.8)..."
@@ -68,7 +68,7 @@ uv pip install --pre --upgrade torch torchvision torchaudio \
 
 # Install project dependencies
 echo "Installing project dependencies..."
-uv pip install -e .
+#uv pip install -e .
 
 # Create necessary directories
 mkdir -p data checkpoints logs results wandb
