@@ -137,7 +137,7 @@ def convert_subset(set_name, config: DataProcessConfig):
     if set_name == "train" and config.subsample_size is not None:
         total_samples = len(inputs)
         if config.subsample_size < total_samples:
-            indices = np.random.choice(total_samples, config.size=config.subsample_size, replace=False)
+            indices = np.random.choice(total_samples, size=config.subsample_size, replace=False)
             inputs = inputs[indices]
             labels = labels[indices]
 
