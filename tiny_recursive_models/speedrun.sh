@@ -108,8 +108,8 @@ build_nonogram_dataset() {
     echo "[Step 1/3] Building Nonogram dataset..."
     python -u -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
-        --subsample-size $SUBSAMPLE_SIZE
-		--dataset-path $DATASET_PATH
+        --subsample-size $SUBSAMPLE_SIZE \
+		--dataset-path $DATASET_PATH \
 		--processed-dataset-path $PROCESSED_DATASET_PATH
     echo "Nonogram with size $SIZE X $SIZE dataset built successfully!"
     echo ""

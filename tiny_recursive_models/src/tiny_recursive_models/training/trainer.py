@@ -14,14 +14,14 @@ from ..utils import load_model_class
 
 # Import optimizer from our vendored implementation
 try:
-    from . import AdamATan2
+    from .optimizers import AdamATan2
 except Exception:
     AdamATan2 = None
 
 # Import from trm package
-from . import PuzzleDataset, PuzzleDatasetConfig
-from . import PuzzleDatasetMetadata
-from . import CastedSparseEmbeddingSignSGD_Distributed
+from ..data.puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig
+from ..data.common import PuzzleDatasetMetadata
+from ..models.sparse_embedding import CastedSparseEmbeddingSignSGD_Distributed
 
 
 def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size: int, **kwargs):

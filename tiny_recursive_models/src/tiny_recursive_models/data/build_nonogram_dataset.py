@@ -59,6 +59,7 @@ def download_files(config: DataProcessConfig):
   all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
   os.makedirs(config.processed_dataset_path, exist_ok=False)
   os.makedirs(config.size_dir_path,          exist_ok=False)
+  os.makedirs(os.path.join(config.size_dir_path, "before_subsets"), exist_ok=False)
 
   # Loop through and load them
   for file_path in all_npz:
@@ -78,7 +79,7 @@ def download_files(config: DataProcessConfig):
         print(f"Loaded {filename}: {total_in_file} total samples. Sampling {num_samples_to_save}...", flush=True)
         indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
         subsampled_array = array[indices]
-        np.save(os.path.join(config.size_dir_path, filename), subsampled_array)
+        np.save(os.path.join(config.size_dir_path, "before_subsets", filename), subsampled_array)
         print(f"Successfully saved {num_samples_to_save} random samples from {filename}", flush=True)
 
       except Exception as e:
@@ -90,18 +91,15 @@ def download_files(config: DataProcessConfig):
   print(f"Finished downloading dataset with size {config.size}x{config.size}")
   
 def load_files(set_name, config: DataProcessConfig):
-  print("Started loading dataset files", flush=True)
   if config.size==5:
-    clues = np.load(os.path.join(config.size_dir_path, "train_combined.npz.npy"))
-    print("Loaded clues", flush=True)
-    labels = np.load(os.path.join(config.size_dir_path, "target_combined.npz.npy"))
-    print("Loaded labels", flush=True)
+    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", "train_combined.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", "target_combined.npz.npy"))
   elif config.size==10:
-    clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_dataset.npz.npy"))
-    labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_dataset.npz.npy"))
+    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
   elif config.size==15:
-    clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_15x15_ok.npz.npy"))
-    labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
+    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", f"x_{set_name}_15x15_ok.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", f"y_{set_name}_15x15_ok.npz.npy"))
   
   nonograms_number = clues.shape[0]
   parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
@@ -209,7 +207,7 @@ def convert_subset(set_name, config: DataProcessConfig):
     )
 
     # Save metadata as JSON.
-    save_dir = os.path.join(config.processed_dataset_path, config.size, set_name)
+    save_dir = os.path.join(config.size_dir_path, set_name)
     os.makedirs(save_dir, exist_ok=True)
     
     with open(os.path.join(save_dir, "dataset.json"), "w") as f:
@@ -220,7 +218,7 @@ def convert_subset(set_name, config: DataProcessConfig):
         np.save(os.path.join(save_dir, f"all__{k}.npy"), v)
         
     # Save IDs mapping (for visualization only)
-    with open(os.path.join(config.processed_dataset_path, "identifiers.json"), "w") as f:
+    with open(os.path.join(save_dir, "identifiers.json"), "w") as f:
         json.dump(["<blank>"], f)
 
 
@@ -230,6 +228,8 @@ def preprocess_data(config: DataProcessConfig):
     download_files(config)
     convert_subset("train", config)
     convert_subset("test", config)
+    
+    rm_dir(os.path.join(config.size_dir_path, "before_subsets"))
 
 
 if __name__ == "__main__":
