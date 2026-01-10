@@ -4,7 +4,7 @@ import os
 import torch
 from torch import nn
 
-from . import PretrainConfig, TrainState
+from .config import PretrainConfig, TrainState
 
 
 def save_train_state(config: PretrainConfig, train_state: TrainState):

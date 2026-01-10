@@ -8,8 +8,8 @@ import torch
 import numpy as np
 import torch.distributed as dist
 
-from . import inverse_aug, grid_hash, arc_grid_to_np
-from . import PuzzleDatasetMetadata
+from ..data.build_arc_dataset import inverse_aug, grid_hash, arc_grid_to_np
+from ..data.common import PuzzleDatasetMetadata
 
 
 def _crop_np(grid: np.ndarray) -> np.ndarray:

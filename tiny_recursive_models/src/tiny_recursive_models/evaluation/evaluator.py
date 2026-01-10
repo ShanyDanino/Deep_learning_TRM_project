@@ -5,11 +5,11 @@ from typing import Optional, List, Any
 import torch
 import torch.distributed as dist
 
-from . import PretrainConfig, TrainState
-from . import load_model_class
+from ..training.config import PretrainConfig, TrainState
+from ..utils import load_model_class
 
 # Import from original locations (these haven't moved yet)
-from . import PuzzleDatasetMetadata
+from ..data.puzzle_dataset import PuzzleDatasetMetadata
 
 
 def create_evaluators(config: PretrainConfig, eval_metadata: PuzzleDatasetMetadata) -> List[Any]:

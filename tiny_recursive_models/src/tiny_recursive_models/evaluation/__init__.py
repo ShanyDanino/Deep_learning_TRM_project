@@ -1,10 +1,10 @@
 """Evaluation utilities."""
 
-from . import (
+from .evaluator import (
     evaluate,
     create_evaluators,
 )
-from . import ARC
+from .arc import ARC
 
 __all__ = [
     "evaluate",

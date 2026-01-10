@@ -8,9 +8,9 @@ import torch.distributed as dist
 from torch import nn
 from torch.utils.data import DataLoader
 
-from . import PretrainConfig, TrainState
-from . import load_checkpoint
-from . import load_model_class
+from .config import PretrainConfig, TrainState
+from .checkpoint import load_checkpoint
+from ..utils import load_model_class
 
 # Import optimizer from our vendored implementation
 try:
