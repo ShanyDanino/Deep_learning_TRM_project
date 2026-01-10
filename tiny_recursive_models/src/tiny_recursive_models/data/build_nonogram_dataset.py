@@ -2,6 +2,10 @@ import os
 import csv
 import json
 import numpy as np
+import math
+import glob
+import zipfile
+import shutil
 
 from typing import Optional
 from argdantic import ArgParser
@@ -9,20 +13,21 @@ from pydantic import BaseModel
 from tqdm import tqdm
 from huggingface_hub import hf_hub_download
 
-from trm.data.common import PuzzleDatasetMetadata
+from .common import PuzzleDatasetMetadata
 
 
 cli = ArgParser()
 
 
 class DataProcessConfig(BaseModel):
-    size          : int = 5 # default size for a nonogram (5x5)
-    output_dir    : str = "data/nonogram_dataset"
-    dir_path      : str = os.path.join("sampled_dataset", f"{size}x{size}")
-    clues_max_num : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
-    num_aug       : int = 0
-    subsample_size: Optional[int] = None
-    min_difficulty: Optional[int] = None
+    size                  : int = 5 # default size for a nonogram (5x5)
+    orig_dataset_path     : str = "../../NonoDataset"
+    processed_dataset_path: str = "data/nonogram_dataset"
+    size_dir_path         : str = os.path.join(processed_dataset_path, f"{size}x{size}")
+    clues_max_num         : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
+    num_aug               : int = 0
+    subsample_size        : Optional[int] = None
+    min_difficulty        : Optional[int] = None
     
 def rm_dir(directory_path):
   if os.path.exists(directory_path):
@@ -31,28 +36,26 @@ def rm_dir(directory_path):
           print(f"Directory '{directory_path}' and all its contents removed.")
       except OSError as e:
           print(f"Error: {e.strerror}")
-  else:
-      print("Directory not found.")
       
 def download_files(config: DataProcessConfig):
-  rm_dir("sampled_dataset")
+  # If size dir already exists, remove it
+  rm_dir(config.processed_dataset_path)
 
   # Unzip all zip files
-  zip_files = glob.glob(os.path.join(config.dir_path, "**/*.zip"), recursive=True)
+  zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
   for z_file in zip_files:
     try:
       with zipfile.ZipFile(z_file, 'r') as zip_ref:
         # Extract to the specific folder where the zip is located
-        extract_path = os.path.join("./", os.path.dirname(z_file))
-        os.makedirs(os.path.dirname(extract_path), exist_ok=True)
-        zip_ref.extractall(extract_path)
+        extract_to_path = os.path.join(config.orig_dataset_path, f"{size}x{size}")
+        zip_ref.extractall(extract_to_path)
         print(f"Extracted: {os.path.basename(z_file)}")
     except zipfile.BadZipFile:
       print(f"Skipping corrupted zip: {z_file}")
 
-  all_npz = glob.glob(os.path.join("./", "**/*.npz"), recursive=True)
+  all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
   collected_data = {}
-  os.makedirs("sampled_dataset", exist_ok=True)
+  os.makedirs(processed_dataset_path, exist_ok=False)
 
   # Loop through and load them
   for file_path in all_npz:
@@ -70,24 +73,24 @@ def download_files(config: DataProcessConfig):
       except Exception as e:
         print(f"Error loading {filename}: {e}")
 
-      os.makedirs(config.dir_path, exist_ok=True)
-      np.save(os.path.join(config.dir_path, filename), array)
+      os.makedirs(config.size_dir_path, exist_ok=True)
+      np.save(os.path.join(config.size_dir_path, filename), array)
 
-  rm_dir("NonoDataset")
+  rm_dir(config.orig_dataset_path)
 
   print("=" * 90)
   print(f"Finished downloading dataset with size {config.size}x{config.size}")
   
 def load_files(set_name, config: DataProcessConfig):
   if config.size==5:
-    clues = np.load(os.path.join(config.dir_path, "train_combined.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, "target_combined.npz.npy"))
+    clues = np.load(os.path.join(config.size_dir_path, "train_combined.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, "target_combined.npz.npy"))
   elif config.size==10:
-    clues = np.load(os.path.join(config.dir_path, f"x_{set_name}_dataset.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, f"y_{set_name}_dataset.npz.npy"))
+    clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_dataset.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_dataset.npz.npy"))
   elif config.size==15:
-    clues = np.load(os.path.join(config.dir_path, f"x_{set_name}_15x15_ok.npz.npy"))
-    labels = np.load(os.path.join(config.dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
+    clues = np.load(os.path.join(config.size_dir_path, f"x_{set_name}_15x15_ok.npz.npy"))
+    labels = np.load(os.path.join(config.size_dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
       
   nonograms_number = clues.shape[0]
   parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
@@ -221,16 +224,6 @@ def convert_subset(set_name, config: DataProcessConfig):
 
 @cli.command(singleton=True)
 def preprocess_data(config: DataProcessConfig):
-    # Pulling dataset files
-    GITHUB_DATASET_REPO_URL = "https://github.com/josebambu/NonoDataset.git"
-    dataset_repo_name = GITHUB_DATASET_REPO_URL.split("/")[-1].replace(".git", "")
-
-    if not os.path.exists(dataset_repo_name):
-        print(f"Cloning {dataset_repo_name}...")
-        !git clone $GITHUB_DATASET_REPO_URL
-    else:
-        print(f"Repository '{dataset_repo_name}' already exists. Skipping clone.")
-    
     download_files(config)
     convert_subset("train", config)
     convert_subset("test", config)
