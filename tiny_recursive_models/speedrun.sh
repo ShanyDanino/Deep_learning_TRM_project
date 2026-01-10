@@ -31,7 +31,7 @@ echo "=========================================="
 echo "TinyRecursiveModels Training & Evaluation"
 echo "=========================================="
 echo "Detected GPUs: $DETECTED_GPUS"
-echo "Nonogram size: $SIZE"
+echo "Nonogram size: $SIZE X $SIZE"
 echo "Subsample size: $SUBSAMPLE_SIZE"
 echo "Using GPUs: $NUM_GPUS"
 echo "=========================================="
@@ -41,7 +41,7 @@ echo ""
 # Step 0: Environment Setup
 # ============================================================================
 
-echo "[Step 0/4] Setting up environment..."
+echo "[Step 0/3] Setting up environment..."
 
 # Check if uv is installed, install if not
 if ! command -v uv &> /dev/null; then
@@ -115,44 +115,12 @@ build_nonogram_dataset() {
 # Step 2: Training Functions
 # ============================================================================
 
-train_nonogram_mlp() {
-    local run_name="pretrain_mlp_t_nonogram_$(date +%Y%m%d_%H%M%S)"
+train_nonogram() {
+    local run_name="pretrain_nonogram_$(date +%Y%m%d_%H%M%S)"
     local batch_size=1536
     local nproc=$NUM_GPUS
     
-    echo "[Step 2/3] Training Nonogram model (MLP-Tiny variant)..."
-    echo "Run name: $run_name"
-    echo "Batch size: $batch_size"
-    echo "GPUs: $nproc"
-    echo ""
-    
-    torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
-        scripts/train.py \
-        arch=trm \
-        data_paths="[data/nonogram_dataset]" \
-        evaluators="[]" \
-        epochs=50000 eval_interval=5000 \
-        lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
-        arch.mlp_t=True arch.pos_encodings=none \
-        arch.L_layers=2 \
-        arch.H_cycles=3 arch.L_cycles=6 \
-        lr_warmup_steps=4000 \
-        global_batch_size=$batch_size \
-        checkpoint_every_eval=True \
-        +run_name=${run_name} ema=True
-    
-    echo "Nonogram training complete!"
-    LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
-    LAST_DATASET="data/nonogram_dataset"
-    echo ""
-}
-
-train_nonogram_att() {
-    local run_name="pretrain_att_nonogram_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
-    local nproc=$NUM_GPUS
-    
-    echo "[Step 2/3] Training Nonogram model (Attention variant)..."
+    echo "[Step 2/3] Training Nonogram model..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
@@ -226,7 +194,7 @@ evaluate_model() {
 # ============================================================================
 
 build_nonogram_dataset
-train_sudoku_att
+train_nonogram
 evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
 
 echo "  $0 nonogram"
