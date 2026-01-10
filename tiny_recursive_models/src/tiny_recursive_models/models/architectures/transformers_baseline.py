@@ -119,6 +119,9 @@ class Model_ACTV2ReasoningModule(nn.Module):
 class Model_ACTV2_Inner(nn.Module):
     def __init__(self, config: Model_ACTV2Config) -> None:
         super().__init__()
+        self.config = config
+        self.forward_dtype = getattr(torch, self.config.forward_dtype)
+        
         # Added code to adjust to nonograms
         # Calculate half size of the hid_dim
         half_hidden = self.config.hidden_size // 2
@@ -129,9 +132,6 @@ class Model_ACTV2_Inner(nn.Module):
             nn.Linear(half_hidden, half_hidden)
         )        
         
-        self.config = config
-        self.forward_dtype = getattr(torch, self.config.forward_dtype)
-
         # I/O
         self.embed_scale = math.sqrt(self.config.hidden_size)
         embed_init_std = 1.0 / self.embed_scale
@@ -196,8 +196,8 @@ class Model_ACTV2_Inner(nn.Module):
         col_inputs = clues_tensor[..., 1, :].to(self.forward_dtype)
         
         # Output shape for each: (Batch, H, W, Hidden_Size // 2)
-        row_emb = self.row_clue_encoder(row_inputs)
-        col_emb = self.col_clue_encoder(col_inputs)
+        row_emb = self.clue_encoder(row_inputs)
+        col_emb = self.clue_encoder(col_inputs)
         
         # Concatenate to get the full hidden size: (Batch, H, W, Hidden_Size)
         grid_embedding = torch.cat([row_emb, col_emb], dim=-1)

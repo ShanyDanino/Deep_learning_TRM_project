@@ -1,9 +1,9 @@
-from typing import Optional
 import os
 import csv
 import json
 import numpy as np
 
+from typing import Optional
 from argdantic import ArgParser
 from pydantic import BaseModel 
 from tqdm import tqdm
@@ -16,18 +16,26 @@ cli = ArgParser()
 
 
 class DataProcessConfig(BaseModel):
-    size : int = None
-    output_dir: str = "data/nonogram_dataset"
-    dir_path : str = os.path.join("sampled_dataset", f"{size}x{size}")
-    max_clue_len: int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
+    size          : int = 5 # default size for a nonogram (5x5)
+    output_dir    : str = "data/nonogram_dataset"
+    dir_path      : str = os.path.join("sampled_dataset", f"{size}x{size}")
+    clues_max_num : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
+    num_aug       : int = 0
     subsample_size: Optional[int] = None
     min_difficulty: Optional[int] = None
-    num_aug: int = 0
-
     
+def rm_dir(directory_path):
+  if os.path.exists(directory_path):
+      try:
+          shutil.rmtree(directory_path)
+          print(f"Directory '{directory_path}' and all its contents removed.")
+      except OSError as e:
+          print(f"Error: {e.strerror}")
+  else:
+      print("Directory not found.")
+      
 def download_files(config: DataProcessConfig):
   rm_dir("sampled_dataset")
-  rm_dir("tmp")
 
   # Unzip all zip files
   zip_files = glob.glob(os.path.join(config.dir_path, "**/*.zip"), recursive=True)
@@ -82,26 +90,26 @@ def load_files(set_name, config: DataProcessConfig):
     labels = np.load(os.path.join(config.dir_path, f"y_{set_name}_15x15_ok.npz.npy"))
       
   nonograms_number = clues.shape[0]
-  parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.max_clue_len)
+  parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
   parsed_labels = labels.reshape(nonograms_number, config.size, config.size)
   
   return broadcast_nonogram_clues(parsed_clues, config), parsed_labels
   
 def broadcast_nonogram_clues(parsed_clues, config: DataProcessConfig):
     """
-    Transforms raw clues (N, 2, config.size, config.max_clue_len) 
-    into pixel-wise grid (N, config.size, config.size, 2, config.max_clue_len).
+    Transforms raw clues (N, 2, config.size, config.clues_max_num) 
+    into pixel-wise grid (N, config.size, config.size, 2, config.clues_max_num).
     """
     # raw_clues index 0: row clues, index 1: col clues
-    row_clues = parsed_clues[:, 0, :, :] # (N, config.size, config.max_clue_len)
-    col_clues = parsed_clues[:, 1, :, :] # (N, config.size, config.max_clue_len)
+    row_clues = parsed_clues[:, 0, :, :] # (N, config.size, config.clues_max_num)
+    col_clues = parsed_clues[:, 1, :, :] # (N, config.size, config.clues_max_num)
     
     # Broadcast rows across the horizontal axis (j)
-    # Result: (N, config.size, config.size, config.max_clue_len)
+    # Result: (N, config.size, config.size, config.clues_max_num)
     row_grid = np.tile(np.expand_dims(row_clues, axis=2), (1, 1, config.size, 1))
     
     # Broadcast columns across the vertical axis (i)
-    # Result: (N, config.size, config.size, config.max_clue_len)
+    # Result: (N, config.size, config.size, config.clues_max_num)
     col_grid = np.tile(np.expand_dims(col_clues, axis=1), (1, config.size, 1, 1))
     
     # Stack into the final 5D tensor
@@ -179,7 +187,7 @@ def convert_subset(set_name, config: DataProcessConfig):
     }
 
     # 5. Metadata and Save
-    # Note: seq_len is now (config.size * config.size * 2 * config.max_clue_len)
+    # Note: seq_len is now (config.size * config.size * 2 * config.clues_max_num)
     metadata = PuzzleDatasetMetadata(
         seq_len=config.size*config.size,
         #All possible clues numbers + PAD + Full+Empty
