@@ -21,7 +21,8 @@ cli = ArgParser()
 
 class DataProcessConfig(BaseModel):
     size                  : int = 5 # default size for a nonogram (5x5)
-    orig_dataset_path     : str = "../../NonoDataset"
+    dataset_path          : str = "../../NonoDataset"
+    orig_dataset_path     : str = os.path.join(dataset_path, f"{size}x{size}")
     processed_dataset_path: str = "data/nonogram_dataset"
     size_dir_path         : str = os.path.join(processed_dataset_path, f"{size}x{size}")
     clues_max_num         : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
@@ -36,10 +37,12 @@ def rm_dir(directory_path):
           print(f"Directory '{directory_path}' and all its contents removed.")
       except OSError as e:
           print(f"Error: {e.strerror}")
+  else:
+      print(f"Directory '{directory_path}' doesn't exist, no removal needed")
       
 def download_files(config: DataProcessConfig):
   # If size dir already exists, remove it
-  rm_dir(config.processed_dataset_path)
+  rm_dir(config.size_dir_path)
 
   # Unzip all zip files
   zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
@@ -54,8 +57,8 @@ def download_files(config: DataProcessConfig):
       print(f"Skipping corrupted zip: {z_file}")
 
   all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
-  collected_data = {}
-  os.makedirs(processed_dataset_path, exist_ok=False)
+  os.makedirs(config.processed_dataset_path, exist_ok=False)
+  os.makedirs(config.size_dir_path,          exist_ok=False)
 
   # Loop through and load them
   for file_path in all_npz:
@@ -73,10 +76,9 @@ def download_files(config: DataProcessConfig):
       except Exception as e:
         print(f"Error loading {filename}: {e}")
 
-      os.makedirs(config.size_dir_path, exist_ok=True)
       np.save(os.path.join(config.size_dir_path, filename), array)
 
-  rm_dir(config.orig_dataset_path)
+  rm_dir(config.dataset_path)
 
   print("=" * 90)
   print(f"Finished downloading dataset with size {config.size}x{config.size}")
@@ -206,7 +208,7 @@ def convert_subset(set_name, config: DataProcessConfig):
     )
 
     # Save metadata as JSON.
-    save_dir = os.path.join(config.output_dir, config.size, set_name)
+    save_dir = os.path.join(config.processed_dataset_path, config.size, set_name)
     os.makedirs(save_dir, exist_ok=True)
     
     with open(os.path.join(save_dir, "dataset.json"), "w") as f:
@@ -217,7 +219,7 @@ def convert_subset(set_name, config: DataProcessConfig):
         np.save(os.path.join(save_dir, f"all__{k}.npy"), v)
         
     # Save IDs mapping (for visualization only)
-    with open(os.path.join(config.output_dir, "identifiers.json"), "w") as f:
+    with open(os.path.join(config.processed_dataset_path, "identifiers.json"), "w") as f:
         json.dump(["<blank>"], f)
 
 

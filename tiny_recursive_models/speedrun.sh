@@ -25,7 +25,7 @@ fi
 # Configuration
 SIZE=${1:-5}
 SUBSAMPLE_SIZE=${2:-1000}
-ORIG_DATASET_PATH=$3
+DATASET_PATH=$3
 PROCESSED_DATASET_PATH=$4
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 
@@ -106,10 +106,10 @@ echo ""
 
 build_nonogram_dataset() {
     echo "[Step 1/3] Building Nonogram dataset..."
-    python -m src.tiny_recursive_models.data.build_nonogram_dataset \
+    python -u -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
         --subsample-size $SUBSAMPLE_SIZE
-		--orig-dataset-path $ORIG_DATASET_PATH
+		--dataset-path $DATASET_PATH
 		--processed-dataset-path $PROCESSED_DATASET_PATH
     echo "Nonogram with size $SIZE X $SIZE dataset built successfully!"
     echo ""
