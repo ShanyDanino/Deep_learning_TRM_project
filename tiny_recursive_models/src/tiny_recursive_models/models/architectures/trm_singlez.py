@@ -120,6 +120,16 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         super().__init__()
         self.config = config
         self.forward_dtype = getattr(torch, self.config.forward_dtype)
+        
+        # Added code to adjust to nonograms
+        # Calculate half size of the hid_dim
+        half_hidden = self.config.hidden_size // 2
+        # Encoder for row and column Clues (Index 0 in dimension 3)
+        self.clue_encoder = nn.Sequential(
+            nn.Linear(self.config.clues_max_num, half_hidden),
+            nn.ReLU(),
+            nn.Linear(half_hidden, half_hidden)
+        )
 
         # I/O
 
@@ -158,24 +168,28 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
             self.q_head.weight.zero_()
             self.q_head.bias.fill_(-5)  # type: ignore
 
-    def _input_embeddings(self, input: torch.Tensor, puzzle_identifiers: torch.Tensor):
-        # Token embedding
-        embedding = self.embed_tokens(input.to(torch.int32))
+    def _input_embeddings(self, clues_tensor: torch.Tensor):        
+        # Extract row/col clues and cast to the correct model dtype
+        row_inputs = clues_tensor[..., 0, :].to(self.forward_dtype)
+        col_inputs = clues_tensor[..., 1, :].to(self.forward_dtype)
+        
+        # Output shape for each: (Batch, H, W, Hidden_Size // 2)
+        row_emb = self.clue_encoder(row_inputs)
+        col_emb = self.clue_encoder(col_inputs)
+        
+        # Concatenate to get the full hidden size: (Batch, H, W, Hidden_Size)
+        grid_embedding = torch.cat([row_emb, col_emb], dim=-1)
 
-        # Puzzle embeddings
-        if self.config.puzzle_emb_ndim > 0:
-            puzzle_embedding = self.puzzle_emb(puzzle_identifiers)
-            
-            pad_count = self.puzzle_emb_len * self.config.hidden_size - puzzle_embedding.shape[-1]
-            if pad_count > 0:
-                puzzle_embedding = F.pad(puzzle_embedding, (0, pad_count))
-
-            embedding = torch.cat((puzzle_embedding.view(-1, self.puzzle_emb_len, self.config.hidden_size), embedding), dim=-2)
-
-        # Position embeddings
-        if self.config.pos_encodings == "learned":
-            # scale by 1/sqrt(2) to maintain forward variance
-            embedding = 0.707106781 * (embedding + self.embed_pos.embedding_weight.to(self.forward_dtype))
+        # Flatten the grid into a sequence to match transformer requirements
+        # Shape becomes: (Batch, Seq_Len, Hidden_Size) where Seq_Len = H * W
+        B, H, W, D = grid_embedding.shape
+        embedding = grid_embedding.view(B, H * W, D)
+        
+        # We slice the positional embeddings to match the current sequence length (H*W)
+        pos_emb = self.embed_pos.embedding_weight[:H*W, :].to(self.forward_dtype)
+        
+        # Scale by 1/sqrt(2) to maintain forward variance
+        embedding = 0.707106781 * (embedding + pos_emb)
 
         # Scale
         return self.embed_scale * embedding
@@ -196,7 +210,7 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         )
 
         # Input encoding
-        input_embeddings = self._input_embeddings(batch["inputs"], batch["puzzle_identifiers"])
+        input_embeddings = self._input_embeddings(batch["inputs"])
 
         # Forward iterations
         it = 0
@@ -215,7 +229,7 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
 
         # LM Outputs
         new_carry = TinyRecursiveReasoningModel_ACTV1InnerCarry(z_L=z_L.detach())  # New carry no grad
-        output = self.lm_head(z_out)[:, self.puzzle_emb_len:]
+        output = self.lm_head(z_out)
         q_logits = self.q_head(z_out[:, 0]).to(torch.float32) # Q-head; uses the first puzzle_emb position
         return new_carry, output, (q_logits[..., 0], q_logits[..., 1])
 

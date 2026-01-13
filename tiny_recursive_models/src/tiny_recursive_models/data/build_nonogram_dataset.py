@@ -24,7 +24,6 @@ class DataProcessConfig(BaseModel):
     dataset_path          : str = "../../NonoDataset"
     orig_dataset_path     : str = os.path.join(dataset_path, f"{size}x{size}")
     processed_dataset_path: str = "data/nonogram_dataset"
-    size_dir_path         : str = os.path.join(processed_dataset_path, f"{size}x{size}")
     clues_max_num         : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
     num_aug               : int = 0
     subsample_size        : Optional[int] = None
@@ -58,8 +57,7 @@ def download_files(config: DataProcessConfig):
 
   all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
   os.makedirs(config.processed_dataset_path, exist_ok=False)
-  os.makedirs(config.size_dir_path,          exist_ok=False)
-  os.makedirs(os.path.join(config.size_dir_path, "before_subsets"), exist_ok=False)
+  os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
 
   # Loop through and load them
   for file_path in all_npz:
@@ -79,7 +77,7 @@ def download_files(config: DataProcessConfig):
         print(f"Loaded {filename}: {total_in_file} total samples. Sampling {num_samples_to_save}...", flush=True)
         indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
         subsampled_array = array[indices]
-        np.save(os.path.join(config.size_dir_path, "before_subsets", filename), subsampled_array)
+        np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
         print(f"Successfully saved {num_samples_to_save} random samples from {filename}", flush=True)
 
       except Exception as e:
@@ -92,14 +90,14 @@ def download_files(config: DataProcessConfig):
   
 def load_files(set_name, config: DataProcessConfig):
   if config.size==5:
-    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", "train_combined.npz.npy"))
-    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", "target_combined.npz.npy"))
+    clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", "train_combined.npz.npy"))
+    labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", "target_combined.npz.npy"))
   elif config.size==10:
-    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
-    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
+    clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
+    labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
   elif config.size==15:
-    clues = np.load(os.path.join(config.size_dir_path, "before_subsets", f"x_{set_name}_15x15_ok.npz.npy"))
-    labels = np.load(os.path.join(config.size_dir_path, "before_subsets", f"y_{set_name}_15x15_ok.npz.npy"))
+    clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_15x15_ok.npz.npy"))
+    labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_15x15_ok.npz.npy"))
   
   nonograms_number = clues.shape[0]
   parsed_clues  = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
@@ -203,11 +201,12 @@ def convert_subset(set_name, config: DataProcessConfig):
         total_groups=len(results["group_indices"]) - 1,
         mean_puzzle_examples=1 + num_augments,
         total_puzzles=len(results["group_indices"]) - 1,
-        sets=["all"]
+        sets=["all"],
+        clues_max_num=clues_max_num
     )
 
     # Save metadata as JSON.
-    save_dir = os.path.join(config.size_dir_path, set_name)
+    save_dir = os.path.join(config.processed_dataset_path, set_name)
     os.makedirs(save_dir, exist_ok=True)
     
     with open(os.path.join(save_dir, "dataset.json"), "w") as f:
@@ -229,7 +228,7 @@ def preprocess_data(config: DataProcessConfig):
     convert_subset("train", config)
     convert_subset("test", config)
     
-    rm_dir(os.path.join(config.size_dir_path, "before_subsets"))
+    rm_dir(os.path.join(config.processed_dataset_path, "before_subsets"))
 
 
 if __name__ == "__main__":

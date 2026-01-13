@@ -101,7 +101,8 @@ class PuzzleDataset(IterableDataset):
             total_groups=total_groups,
             mean_puzzle_examples=mean_puzzle_examples,
             total_puzzles=total_puzzles,
-            sets=prev_sets
+            sets=prev_sets,
+            clues_max_num=current_metadata.clues_max_num
         )
 
         # Checks

@@ -130,7 +130,7 @@ class Model_ACTV2_Inner(nn.Module):
             nn.Linear(self.config.clues_max_num, half_hidden),
             nn.ReLU(),
             nn.Linear(half_hidden, half_hidden)
-        )        
+        )
         
         # I/O
         self.embed_scale = math.sqrt(self.config.hidden_size)

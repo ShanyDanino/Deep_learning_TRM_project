@@ -143,6 +143,7 @@ train_nonogram() {
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True
+		max_clue_len=
     
     echo "Nonogram training complete!"
     LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
