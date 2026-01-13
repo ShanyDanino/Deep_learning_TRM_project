@@ -130,9 +130,9 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         half_hidden = self.config.hidden_size // 2
         # Encoder for row and column Clues (Index 0 in dimension 3)
         self.clue_encoder = nn.Sequential(
-            nn.CastedLinear(self.config.clues_max_num, half_hidden),
+            CastedLinear(self.config.clues_max_num, half_hidden, bias=False),
             nn.ReLU(),
-            nn.CastedLinear(half_hidden, half_hidden)
+            CastedLinear(half_hidden, half_hidden, bias=False)
         )
         
         # Initialization logic
@@ -143,7 +143,6 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
                     nn.init.zeros_(layer.bias)
     
         # I/O
-
         self.embed_scale = math.sqrt(self.config.hidden_size)
         embed_init_std = 1.0 / self.embed_scale
 

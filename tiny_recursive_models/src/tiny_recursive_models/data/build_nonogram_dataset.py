@@ -202,7 +202,7 @@ def convert_subset(set_name, config: DataProcessConfig):
         mean_puzzle_examples=1 + num_augments,
         total_puzzles=len(results["group_indices"]) - 1,
         sets=["all"],
-        clues_max_num=clues_max_num
+        clues_max_num=config.clues_max_num
     )
 
     # Save metadata as JSON.
