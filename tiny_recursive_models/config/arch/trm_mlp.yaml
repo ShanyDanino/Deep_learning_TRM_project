@@ -18,7 +18,7 @@ expansion: 4
 
 puzzle_emb_ndim: ${.hidden_size}
 
-pos_encodings: rope
+pos_encodings: learned
 forward_dtype: bfloat16
 
 mlp_t: True  # use mlp on L instead of transformer (MLP variant)
