@@ -121,7 +121,7 @@ build_nonogram_dataset() {
 
 train_nonogram() {
     local run_name="pretrain_nonogram_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
+    local batch_size=256
     local nproc=$NUM_GPUS
     
     echo "[Step 2/3] Training Nonogram model..."
@@ -160,7 +160,7 @@ evaluate_model() {
     local dataset_path=$2
     local eval_name=$(basename $checkpoint_path)
     local nproc=$NUM_GPUS
-    local batch_size=1536
+    local batch_size=256
     
     echo "[Step 3/3] Evaluating model..."
     echo "Checkpoint: $checkpoint_path"
