@@ -180,10 +180,10 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
     def _input_embeddings(self, clues_tensor: torch.Tensor, puzzle_identifiers: torch.Tensor):
         # Before embedding tokens, send the clues through a small MLP. Each row + col should be downsized into one pixel
         flattened_clues = clues_tensor.view(self.config.batch_size, -1).to(self.forward_dtype)
-        clues_emb = self.clue_encoder(flattened_clues)
+        grid_embedding = self.clue_encoder(flattened_clues)
 
         # Token embedding
-        grid_embedding = self.embed_tokens(clues_emb.to(torch.int32))
+        #grid_embedding = self.embed_tokens(clues_emb.to(torch.int32))
 
         # Puzzle embeddings
         if self.config.puzzle_emb_ndim > 0:
