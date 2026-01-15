@@ -127,11 +127,10 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         self.forward_dtype = getattr(torch, self.config.forward_dtype)
         
         # Added code to adjust to nonograms
-        # Encoder for row and column Clues (Index 0 in dimension 3)
         self.clue_encoder = nn.Sequential(
-            CastedLinear((self.config.batch_size * (self.config.size**2) * 2 *(self.config.clues_max_num)), self.config.hidden_size), # (B * H * W * 2 * clues_max_num, hidden_size)
+            CastedLinear(((self.config.size**2) * 2 *(self.config.clues_max_num)), self.config.hidden_size, bias=True), # (H * W * 2 * clues_max_num, hidden_size)
             nn.ReLU(),
-            CastedLinear(self.config.hidden_size, self.config.hidden_size, bias=False)
+            CastedLinear(self.config.hidden_size, self.config.hidden_size, bias=True)
         )
         
         # Initialization logic
@@ -178,23 +177,33 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
             self.q_head.weight.zero_()
             self.q_head.bias.fill_(-5)  # type: ignore
 
-    def _input_embeddings(self, clues_tensor: torch.Tensor):        
-        # Reshape tensor to (Batch, H, W, 2 * clues_max_num)
-        clues_tensor = clues_tensor.reshape(self.config.batch_size, self.config.size, self.config.size, (2 * self.config.clues_max_num))
-                
-        # Output shape for each: (Batch, H, W, Hidden_Size)
-        clues_emb = self.clue_encoder(clues_tensor)
+    def _input_embeddings(self, clues_tensor: torch.Tensor):
+        flattened_clues = clues_tensor.view(self.config.batch_size, -1).to(self.forward_dtype)
+        clues_emb = self.clue_encoder(flattened_clues)
         
         # Flatten the grid into a sequence to match transformer requirements
         # Shape becomes: (Batch, Seq_Len, Hidden_Size) where Seq_Len = H * W
-        B, H, W, D = clues_emb.shape
-        embedding = clues_emb.view(B, H * W, D)
+        grid_embedding = clues_emb.view(self.config.batch_size, self.config.size * self.config.size, self.config.hidden_size)
         
         # We slice the positional embeddings to match the current sequence length (H*W)
-        pos_emb = self.embed_pos.embedding_weight[:H*W, :].to(self.forward_dtype)
+        pos_emb = (self.embed_pos.embedding_weight[:self.config.size * self.config.size, :].to(self.forward_dtype))
         
         # Scale by 1/sqrt(2) to maintain forward variance
-        embedding = 0.707106781 * (embedding + pos_emb)
+        grid_embedding = 0.707106781 * (grid_embedding + pos_emb)
+        
+        # Pad for Nonogram embeddings
+        # Create a prefix of zeros to match the puzzle_emb_len
+        if self.puzzle_emb_len > 0:
+            prefix_padding = torch.zeros(
+                self.config.batch_size, 
+                self.puzzle_emb_len, 
+                self.config.hidden_size, 
+                device=grid_embedding.device, 
+                dtype=self.forward_dtype
+            )
+            embedding = torch.cat([prefix_padding, grid_embedding], dim=1)
+        else:
+            embedding = grid_embedding
 
         # Scale
         return self.embed_scale * embedding
