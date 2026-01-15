@@ -64,6 +64,7 @@ class TinyRecursiveReasoningModel_ACTV1Config(BaseModel):
     no_ACT_continue: bool =  True # No continue ACT loss, only use the sigmoid of the halt which makes much more sense
 
     # Nonogram adjustment
+    size: int
     clues_max_num: int
     
 class TinyRecursiveReasoningModel_ACTV1Block(nn.Module):
@@ -126,13 +127,11 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         self.forward_dtype = getattr(torch, self.config.forward_dtype)
         
         # Added code to adjust to nonograms
-        # Calculate half size of the hid_dim
-        half_hidden = self.config.hidden_size // 2
         # Encoder for row and column Clues (Index 0 in dimension 3)
         self.clue_encoder = nn.Sequential(
-            CastedLinear(self.config.clues_max_num, half_hidden, bias=False),
+            CastedLinear((self.config.batch_size * (self.config.size**2) * 2 *(self.config.clues_max_num)), self.config.hidden_size), # (B * H * W * 2 * clues_max_num, hidden_size)
             nn.ReLU(),
-            CastedLinear(half_hidden, half_hidden, bias=False)
+            CastedLinear(self.config.hidden_size, self.config.hidden_size, bias=False)
         )
         
         # Initialization logic
@@ -180,21 +179,16 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
             self.q_head.bias.fill_(-5)  # type: ignore
 
     def _input_embeddings(self, clues_tensor: torch.Tensor):        
-        # Extract row/col clues and cast to the correct model dtype
-        row_inputs = clues_tensor[..., 0, :].to(self.forward_dtype)
-        col_inputs = clues_tensor[..., 1, :].to(self.forward_dtype)
+        # Reshape tensor to (Batch, H, W, 2 * clues_max_num)
+        clues_tensor = clues_tensor.reshape(self.config.batch_size, self.config.size, self.config.size, (2 * self.config.clues_max_num))
+                
+        # Output shape for each: (Batch, H, W, Hidden_Size)
+        clues_emb = self.clue_encoder(clues_tensor)
         
-        # Output shape for each: (Batch, H, W, Hidden_Size // 2)
-        row_emb = self.clue_encoder(row_inputs)
-        col_emb = self.clue_encoder(col_inputs)
-        
-        # Concatenate to get the full hidden size: (Batch, H, W, Hidden_Size)
-        grid_embedding = torch.cat([row_emb, col_emb], dim=-1)
-
         # Flatten the grid into a sequence to match transformer requirements
         # Shape becomes: (Batch, Seq_Len, Hidden_Size) where Seq_Len = H * W
-        B, H, W, D = grid_embedding.shape
-        embedding = grid_embedding.view(B, H * W, D)
+        B, H, W, D = clues_emb.shape
+        embedding = clues_emb.view(B, H * W, D)
         
         # We slice the positional embeddings to match the current sequence length (H*W)
         pos_emb = self.embed_pos.embedding_weight[:H*W, :].to(self.forward_dtype)

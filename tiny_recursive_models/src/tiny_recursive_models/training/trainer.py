@@ -75,6 +75,7 @@ def create_model(config: PretrainConfig, train_metadata: PuzzleDatasetMetadata, 
         seq_len=train_metadata.seq_len,
         num_puzzle_identifiers=train_metadata.num_puzzle_identifiers,
         causal=False,  # Non-autoregressive
+        size=train_metadata.size
         clues_max_num=train_metadata.clues_max_num
     )
 

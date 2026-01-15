@@ -102,6 +102,7 @@ class PuzzleDataset(IterableDataset):
             mean_puzzle_examples=mean_puzzle_examples,
             total_puzzles=total_puzzles,
             sets=prev_sets,
+            size=current_metadata.size,
             clues_max_num=current_metadata.clues_max_num
         )
 

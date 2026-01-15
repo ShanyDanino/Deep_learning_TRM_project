@@ -127,7 +127,7 @@ class Model_ACTV2_Inner(nn.Module):
         half_hidden = self.config.hidden_size // 2
         # Encoder for row and column Clues (Index 0 in dimension 3)
         self.clue_encoder = nn.Sequential(
-            nn.Linear(self.config.clues_max_num, half_hidden),
+            nn.Linear((self.config.batch_size * (self.config.size**2) * (self.config.clues_max_num)), half_hidden), # (B * H * W * clues_max_num, half_hidden)
             nn.ReLU(),
             nn.Linear(half_hidden, half_hidden)
         )

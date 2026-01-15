@@ -41,4 +41,5 @@ ema: False # use Exponential-Moving-Average
 ema_rate: 0.999 # EMA-rate
 freeze_weights: False # If True, freeze weights and only learn the embeddings
 
+size: 5
 clues_max_num: 3
