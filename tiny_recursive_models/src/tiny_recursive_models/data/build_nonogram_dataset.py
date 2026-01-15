@@ -192,8 +192,7 @@ def convert_subset(set_name, config: DataProcessConfig):
     # Note: seq_len is now (config.size * config.size * 2 * config.clues_max_num)
     metadata = PuzzleDatasetMetadata(
         seq_len=config.size*config.size,
-        #All possible clues numbers + PAD + Full+Empty
-        vocab_size=config.size+3,
+        vocab_size=config.size + 3, # All possible clues numbers + PAD + Full + Empty
         pad_id=0,
         ignore_label_id=0,
         blank_identifier_id=0,
