@@ -181,7 +181,7 @@ evaluate_model() {
     # Find the latest checkpoint directory
     if [ -d "$checkpoint_path" ]; then
         # Look for the latest checkpoint subdirectory
-        local latest_ckpt=$(find "$checkpoint_path" -type d -name "step_*" | sort -V | tail -1)
+        local latest_ckpt=$(find "$checkpoint_path" -name "step_*" | sort -V | tail -1)
         
         if [ -z "$latest_ckpt" ]; then
             echo "WARNING: No checkpoint found in $checkpoint_path, skipping evaluation"

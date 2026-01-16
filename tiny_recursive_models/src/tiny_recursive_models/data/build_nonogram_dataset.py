@@ -74,11 +74,9 @@ def download_files(config: DataProcessConfig):
         
         total_in_file       = array.shape[0]
         num_samples_to_save = min(config.subsample_size, array.shape[0])
-        print(f"Loaded {filename}: {total_in_file} total samples. Sampling {num_samples_to_save}...", flush=True)
         indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
         subsampled_array = array[indices]
         np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
-        print(f"Successfully saved {num_samples_to_save} random samples from {filename}", flush=True)
 
       except Exception as e:
         print(f"Error loading {filename}: {e}")
