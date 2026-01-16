@@ -24,12 +24,13 @@ fi
 
 # Configuration
 SIZE=${1:-5}
-SUBSAMPLE_SIZE=${2:-1000}
-EPOCHS_NUM=${3:-100}
-BATCH_SIZE=${4:-256}
-EVAL_INTERVAL=${5:-10}
-DATASET_PATH=$6
-PROCESSED_DATASET_PATH=$7
+SUBSAMPLE_SIZE_TRAIN=${2:-1000}
+SUBSAMPLE_SIZE_TEST=${3:-200}
+EPOCHS_NUM=${4:-100}
+BATCH_SIZE=${5:-256}
+EVAL_INTERVAL=${6:-10}
+DATASET_PATH=$7
+PROCESSED_DATASET_PATH=$8
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 
 echo "=========================================="
@@ -116,7 +117,8 @@ build_nonogram_dataset() {
     echo "[Step 1/3] Building Nonogram dataset..."
     python -u -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
-        --subsample-size $SUBSAMPLE_SIZE \
+        --subsample-size-train $SUBSAMPLE_SIZE_TRAIN \
+		--subsample-size-test $SUBSAMPLE_SIZE_TEST \
 		--dataset-path $DATASET_PATH \
 		--processed-dataset-path $PROCESSED_DATASET_PATH
     echo "Nonogram with size $SIZE X $SIZE dataset built successfully!"
@@ -181,7 +183,7 @@ evaluate_model() {
     # Find the latest checkpoint directory
     if [ -d "$checkpoint_path" ]; then
         # Look for the latest checkpoint subdirectory
-        local latest_ckpt=$(find "$checkpoint_path" -type d -name "step_*" | sort -V | tail -1)
+        local latest_ckpt=$(find "$checkpoint_path" -name "step_*" | sort -V | tail -1)
         
         if [ -z "$latest_ckpt" ]; then
             echo "WARNING: No checkpoint found in $checkpoint_path, skipping evaluation"
