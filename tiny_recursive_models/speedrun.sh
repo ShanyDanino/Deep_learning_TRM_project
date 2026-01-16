@@ -71,7 +71,10 @@ fi
 # Install PyTorch with CUDA 12.8 support
 echo "Installing PyTorch (CUDA 12.8)..."
 uv pip install --pre --upgrade torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cu128
+    --index-url https://download.pytorch.org/whl/cu124
+
+echo "Installing numpy..."
+uv pip install "numpy<2.0.0"
 
 # Install project dependencies
 echo "Installing project dependencies..."
@@ -150,10 +153,10 @@ train_nonogram() {
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True
-		max_clue_len=
-    
+
     echo "Nonogram training complete!"
-    LAST_CHECKPOINT="checkpoints/TRM/${run_name}"
+    LAST_CHECKPOINT="checkpoints/Nonogram_dataset-ACT-torch/${run_name}"
+    echo "Last checkpoint: $LAST_CHECKPOINT"
     LAST_DATASET="data/nonogram_dataset"
     echo ""
 }
