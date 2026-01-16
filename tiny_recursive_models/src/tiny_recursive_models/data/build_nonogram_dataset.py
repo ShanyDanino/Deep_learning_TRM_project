@@ -26,7 +26,8 @@ class DataProcessConfig(BaseModel):
     processed_dataset_path: str = "data/nonogram_dataset"
     clues_max_num         : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
     num_aug               : int = 0
-    subsample_size        : Optional[int] = None
+    subsample_size_train  : Optional[int] = None
+    subsample_size_test   : Optional[int] = None
     min_difficulty        : Optional[int] = None
     
 def rm_dir(directory_path):
@@ -39,12 +40,12 @@ def rm_dir(directory_path):
   else:
       print(f"Directory '{directory_path}' doesn't exist, no removal needed")
       
-def download_files(config: DataProcessConfig):
+def download_files(set_name, config: DataProcessConfig):
   # If size dir already exists, remove it
   rm_dir(config.processed_dataset_path)
 
   # Unzip all zip files
-  zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
+  zip_files = glob.glob(os.path.join(config.orig_dataset_path, f"**{set_name}**/*.zip"), recursive=True)
   for z_file in zip_files:
     try:
       with zipfile.ZipFile(z_file, 'r') as zip_ref:
@@ -55,7 +56,7 @@ def download_files(config: DataProcessConfig):
     except zipfile.BadZipFile:
       print(f"Skipping corrupted zip: {z_file}")
 
-  all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
+  all_npz = glob.glob(os.path.join(config.orig_dataset_path, f"**{set_name}**/*.npz"), recursive=True)
   os.makedirs(config.processed_dataset_path, exist_ok=False)
   os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
 
@@ -73,7 +74,8 @@ def download_files(config: DataProcessConfig):
         array = next(iter(data.values()))
         
         total_in_file       = array.shape[0]
-        num_samples_to_save = min(config.subsample_size, array.shape[0])
+        subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_test
+        num_samples_to_save = min(subsample_size, array.shape[0])
         indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
         subsampled_array = array[indices]
         np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
@@ -222,7 +224,8 @@ def convert_subset(set_name, config: DataProcessConfig):
 
 @cli.command(singleton=True)
 def preprocess_data(config: DataProcessConfig):
-    download_files(config)
+    download_files("train", config)
+    download_files("test", config)
     convert_subset("train", config)
     convert_subset("test", config)
     
