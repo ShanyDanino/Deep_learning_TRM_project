@@ -25,8 +25,11 @@ fi
 # Configuration
 SIZE=${1:-5}
 SUBSAMPLE_SIZE=${2:-1000}
-DATASET_PATH=$3
-PROCESSED_DATASET_PATH=$4
+EPOCHS_NUM=${3:-100}
+BATCH_SIZE=${4:-256}
+EVAL_INTERVAL=${5:-10}
+DATASET_PATH=$6
+PROCESSED_DATASET_PATH=$7
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 
 echo "=========================================="
@@ -35,6 +38,8 @@ echo "=========================================="
 echo "Detected GPUs: $DETECTED_GPUS"
 echo "Nonogram size: $SIZE X $SIZE"
 echo "Subsample size: $SUBSAMPLE_SIZE"
+echo "Epochs num: $EPOCHS_NUM"
+echo "Eval interval: $EVAL_INTERVAL"
 echo "Using GPUs: $NUM_GPUS"
 echo "=========================================="
 echo ""
@@ -121,7 +126,9 @@ build_nonogram_dataset() {
 
 train_nonogram() {
     local run_name="pretrain_nonogram_$(date +%Y%m%d_%H%M%S)"
-    local batch_size=1536
+    local batch_size=$BATCH_SIZE
+    local epoch_num=$EPOCHS_NUM
+    local eval_interval=$EVAL_INTERVAL
     local nproc=$NUM_GPUS
     
     echo "[Step 2/3] Training Nonogram model..."
@@ -135,7 +142,7 @@ train_nonogram() {
         arch=trm \
         data_paths="[data/nonogram_dataset]" \
         evaluators="[]" \
-        epochs=50000 eval_interval=5000 \
+        epochs=$epoch_num eval_interval=$eval_interval \
         lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
         arch.L_layers=2 \
         arch.H_cycles=3 arch.L_cycles=6 \
@@ -160,7 +167,7 @@ evaluate_model() {
     local dataset_path=$2
     local eval_name=$(basename $checkpoint_path)
     local nproc=$NUM_GPUS
-    local batch_size=1536
+    local batch_size=$BATCH_SIZE
     
     echo "[Step 3/3] Evaluating model..."
     echo "Checkpoint: $checkpoint_path"
