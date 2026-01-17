@@ -24,6 +24,13 @@ def plot_nonogram_combined(board, clues_grid, title="Nonogram"):
     - clues_grid: (N, M) numpy array (dtype=object).
       clues_grid[i, j] must contain (row_clues_for_row_i, col_clues_for_col_j).
     """
+    unique_vals = np.unique(board)
+    # Check if every value in the board is either 0 or 1
+    if not np.all(np.isin(unique_vals, [0, 1])):
+        print(f"Visualizer Error: Board contains non-binary values! Found: {unique_vals}. Expected only {{0, 1}}.")
+        raise ValueError(
+            f"Visualizer Error: Board contains non-binary values! Found: {unique_vals}. Expected only {{0, 1}}.")
+
     rows, cols = board.shape
 
     # Extract Clues ---
@@ -127,7 +134,7 @@ def evaluate(
     
     with torch.inference_mode():
         return_keys = set(config.eval_save_outputs)
-        retrun_keys.add("logits")
+        return_keys.add("logits")
         for evaluator in evaluators:
             evaluator.begin_eval()
             return_keys.update(evaluator.required_outputs)
@@ -192,8 +199,8 @@ def evaluate(
                                 clues_grid_obj = np.empty((size, size), dtype=object)
                                 for r in range(size):
                                     for c in range(size):
-                                        row_c = real_clues[r, c, 0, :].astype(int)
-                                        col_c = real_clues[r, c, 1, :].astype(int)
+                                        row_c = clues[r, c, 0, :].astype(int)
+                                        col_c = clues[r, c, 1, :].astype(int)
                                         clues_grid_obj[r, c] = (row_c, col_c)
                                 
                                 # Plot
