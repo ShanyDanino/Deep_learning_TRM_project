@@ -216,29 +216,34 @@ evaluate_model() {
 case $TASK in
     build)
         build_nonogram_dataset
+        echo "=========================================="
+        echo "Building dataset Complete!"
+        echo "=========================================="
+        echo ""
         ;;
 
     train)
         train_nonogram
         evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+        echo "  $0 nonogram"
+        echo "=========================================="
+        echo "Training and Evaluation Complete!"
+        echo "=========================================="
+        echo ""
         ;;
 
     build_and_train)
         build_nonogram_dataset
         train_nonogram
         evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+        echo "  $0 nonogram"
         ;;
-
-echo "  $0 nonogram"
+esac
 
 # ============================================================================
 # Final Summary
 # ============================================================================
 
-echo "=========================================="
-echo "Training and Evaluation Complete!"
-echo "=========================================="
-echo ""
 echo "Summary:"
 echo "  GPUs used: $NUM_GPUS"
 if [ -n "$LAST_CHECKPOINT" ]; then
