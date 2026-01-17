@@ -4,6 +4,9 @@ import os
 from typing import Optional, List, Any
 import torch
 import torch.distributed as dist
+import matplotlib.pyplot as plt
+import wandb
+import numpy as np
 
 from ..training.config import PretrainConfig, TrainState
 from ..utils import load_model_class
@@ -12,6 +15,58 @@ from ..utils import load_model_class
 from ..data.puzzle_dataset import PuzzleDatasetMetadata
 
 
+def plot_nonogram_combined(board, clues_grid, title="Nonogram"):
+    """
+    Visualizes a Nonogram and returns the Figure object for logging.
+
+    Parameters:
+    - board: (N, M) numpy array (binary 0/1).
+    - clues_grid: (N, M) numpy array (dtype=object).
+      clues_grid[i, j] must contain (row_clues_for_row_i, col_clues_for_col_j).
+    """
+    rows, cols = board.shape
+
+    # Extract Clues ---
+    row_clues = [clues_grid[r, 0][0] for r in range(rows)]
+    col_clues = [clues_grid[0, c][1] for c in range(cols)]
+
+    # Plotting Logic ---
+    fig, ax = plt.subplots(figsize=(cols / 1.5 + 2, rows / 1.5 + 2))
+    ax.imshow(1 - board, cmap='gray', vmin=0, vmax=1, interpolation='nearest')
+
+    ax.set_xticks(np.arange(-0.5, cols, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, rows, 1), minor=True)
+    ax.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+
+    for r in range(5, rows, 5):
+        ax.axhline(r - 0.5, color='black', linewidth=2.5)
+    for c in range(5, cols, 5):
+        ax.axvline(c - 0.5, color='black', linewidth=2.5)
+
+    ax.tick_params(axis='both', which='both', left=False, bottom=False,
+                   labelleft=False, labelbottom=False)
+
+    # Render Clues (Filtering Zeros) ---
+    for r in range(rows):
+        # Filter out zeros before joining
+        cleaned_clues = [str(x) for x in row_clues[r] if x > 0]
+        txt = " ".join(cleaned_clues)
+        ax.text(-0.6, r, txt, ha='right', va='center', fontsize=12, fontweight='bold')
+
+    for c in range(cols):
+        # Filter out zeros before joining
+        cleaned_clues = [str(x) for x in col_clues[c] if x > 0]
+        txt = "\n".join(cleaned_clues)
+        ax.text(c, -0.6, txt, ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(2)
+
+    plt.title(title, pad=30)
+    plt.tight_layout()
+    
+    return fig
+    
 def create_evaluators(config: PretrainConfig, eval_metadata: PuzzleDatasetMetadata) -> List[Any]:
     """Create evaluator instances from config.
     
@@ -67,9 +122,12 @@ def evaluate(
         Dictionary of metrics (on rank 0 only)
     """
     reduced_metrics = None
-
+    processed_batches = 0
+    total_samples = 0
+    
     with torch.inference_mode():
         return_keys = set(config.eval_save_outputs)
+        retrun_keys.add("logits")
         for evaluator in evaluators:
             evaluator.begin_eval()
             return_keys.update(evaluator.required_outputs)
@@ -104,6 +162,58 @@ def evaluate(
                 inference_steps += 1
 
                 if all_finish:
+                    # Visualize 10 examples from the first batch
+                    if rank == 0 and processed_batches == 1:
+                        try:
+                            num_plot = min(batch["inputs"].shape[0], 10)
+                            wandb_images = []
+                            
+                            print(f"[Visualizer] Generating {num_plot} plots for WandB...")
+
+                            for idx in range(num_plot):
+                                size = eval_metadata.size
+
+                                # Get prediction
+                                pred_flat = torch.argmax(preds["logits"], dim=-1)[idx].cpu().numpy()
+                                board = pred_flat.reshape(size, size)
+                                
+                                # Get label and check correctness
+                                label_flat = batch["labels"][idx].cpu().numpy()
+                                label_board = label_flat.reshape(size, size)
+                                is_correct = np.all(board == label_board)
+                                status_str = "Correct" if is_correct else "Incorrect"
+
+                                # Get Clues for
+                                raw_inputs = batch["inputs"][idx].cpu().numpy()
+                                reshaped_inputs = raw_inputs.reshape(size, size, 2, eval_metadata.clues_max_num)
+                                clues = reshaped_inputs - 1  # Restore (0 -> -1 padding)
+                                
+                                # Format Clues
+                                clues_grid_obj = np.empty((size, size), dtype=object)
+                                for r in range(size):
+                                    for c in range(size):
+                                        row_c = real_clues[r, c, 0, :].astype(int)
+                                        col_c = real_clues[r, c, 1, :].astype(int)
+                                        clues_grid_obj[r, c] = (row_c, col_c)
+                                
+                                # Plot
+                                fig = plot_nonogram_combined(
+                                    board, 
+                                    clues_grid_obj, 
+                                    title=f"Nonogram #{idx} is {status_str} in step {train_state.step}"
+                                )
+                                
+                                wandb_images.append(wandb.Image(fig))
+                                plt.close(fig)
+
+                            # Log images
+                            if wandb.run is not None:
+                                wandb.log({"eval/predictions_gallery": wandb_images}, step=train_state.step)
+
+                        except Exception as e:
+                            print(f"[Visualizer Error] {e}")
+                            import traceback
+                            traceback.print_exc()                    
                     break
 
             if rank == 0:

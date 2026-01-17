@@ -15,6 +15,8 @@ from huggingface_hub import hf_hub_download
 
 from .common import PuzzleDatasetMetadata
 
+IGNORE_LABEL_ID = -100
+
 cli = ArgParser()
 
 
@@ -149,10 +151,10 @@ def augment_nonogram(row_clues: np.ndarray, col_clues: np.ndarray, solution: np.
 
 
 def convert_subset(set_name, config: DataProcessConfig):
-    # 1. Load and process clues into your requested 5D shape
+    # Load and process clues into your requested 5D shape
     inputs, labels = load_files(set_name, config)
 
-    # 3. Generate dataset with indexing
+    # Generate dataset with indexing
     num_augments = config.num_aug if set_name == "train" else 0
     results = {k: [] for k in ["inputs", "labels", "puzzle_identifiers", "puzzle_indices", "group_indices"]}
     puzzle_id = 0
@@ -185,25 +187,38 @@ def convert_subset(set_name, config: DataProcessConfig):
         # Push group boundary (tracks original + all its augments)
         results["group_indices"].append(puzzle_id)
 
-    # 4. Final conversion and +1 vocab shift
-    def _to_numpy(seq):
-        return np.array(seq, dtype=np.int32) + 1
+    # Final conversion and +1 vocab shift (to allow for empty spaces)
+    def _inputs_to_numpy(seq):
+        arr = np.array(seq, dtype=np.int32)
+
+        if not np.all((arr >= 0) & (arr <= config.size)):
+            min_val, max_val = arr.min(), arr.max()
+            raise ValueError(f"Input checking failed! Expected 0-{config.size}, but found range [{min_val}, {max_val}].")
+        return arr + 1
+
+    # Final conversion with no vocab shift (final results should be either 0 or 1)
+    def _labels_to_numpy(seq):
+        arr = np.array(seq, dtype=np.int32)
+
+        if not np.all((arr >= 0) & (arr <= 1)):
+            min_val, max_val = arr.min(), arr.max()
+            raise ValueError(f"Label checking failed! Expected 0-1, but found range [{min_val}, {max_val}].")
+        return arr
 
     results = {
-        "inputs": _to_numpy(results["inputs"]),
-        "labels": _to_numpy(results["labels"]),
+        "inputs": _inputs_to_numpy(results["inputs"]),
+        "labels": _labels_to_numpy(results["labels"]),
         "group_indices": np.array(results["group_indices"], dtype=np.int32),
         "puzzle_indices": np.array(results["puzzle_indices"], dtype=np.int32),
         "puzzle_identifiers": np.array(results["puzzle_identifiers"], dtype=np.int32),
     }
 
-    # 5. Metadata and Save
-    # Note: seq_len is now (config.size * config.size * 2 * config.clues_max_num)
+    # Metadata
     metadata = PuzzleDatasetMetadata(
         seq_len=config.size * config.size,
         vocab_size=config.size + 3,  # All possible clues numbers + PAD + Full + Empty
         pad_id=0,
-        ignore_label_id=0,
+        ignore_label_id=IGNORE_LABEL_ID,
         blank_identifier_id=0,
         num_puzzle_identifiers=1,
         total_groups=len(results["group_indices"]) - 1,

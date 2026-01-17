@@ -15,27 +15,25 @@ def s(x, epsilon=1e-30):
         x + 1
     )
 
-
-def log_stablemax(x, dim=-1):
-    s_x = s(x)
-    return torch.log(s_x/torch.sum(s_x, dim=dim, keepdim=True))
-
-
-def stablemax_cross_entropy(logits, labels, ignore_index: int = -100, valid_mask=None):
-    logprobs = log_stablemax(logits.to(torch.float64), dim=-1)
-
+def binary_cross_entropy(logits, labels, ignore_index: int = -100, valid_mask=None):
+    """
+    Computes BCE Loss for Nonograms.
+    Assumes logits shape is (..., 2) where:
+      index 0 = Empty
+      index 1 = Full
+    """
     if valid_mask is None:
         valid_mask = (labels != ignore_index)
-    transformed_labels = torch.where(valid_mask, labels, 0)
-    prediction_logprobs = torch.gather(logprobs, index=transformed_labels.to(torch.long).unsqueeze(-1), dim=-1).squeeze(-1)
 
-    return -torch.where(valid_mask, prediction_logprobs, 0)
+    # Convert 2 logits to 1 scalar (Logit for "1" - Logit for "0")
+    # Creates a single score: Positive means "Model thinks it's Full"
+    pred_logits = logits[..., 1] - logits[..., 0]
 
+    safe_labels = torch.where(valid_mask, labels, 0).float()
+    loss = F.binary_cross_entropy_with_logits(pred_logits, safe_labels, reduction='none')
 
-def softmax_cross_entropy(logits, labels, ignore_index: int = -100):
-    # Cast logits to f32
-    # Flatten logits
-    return F.cross_entropy(logits.to(torch.float32).view(-1, logits.shape[-1]), labels.to(torch.long).view(-1), ignore_index=ignore_index, reduction="none").view(labels.shape)
+    # Zero out loss for padding/ignored tokens so they won't count
+    return torch.where(valid_mask, loss, 0.0)
 
 
 class ACTLossHead(nn.Module):
