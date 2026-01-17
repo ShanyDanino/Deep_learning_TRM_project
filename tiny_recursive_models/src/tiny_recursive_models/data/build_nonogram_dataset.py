@@ -9,7 +9,7 @@ import shutil
 
 from typing import Optional
 from argdantic import ArgParser
-from pydantic import BaseModel 
+from pydantic import BaseModel, model_validator
 from tqdm import tqdm
 from huggingface_hub import hf_hub_download
 
@@ -20,16 +20,23 @@ cli = ArgParser()
 
 
 class DataProcessConfig(BaseModel):
-    size                  : int = 5 # default size for a nonogram (5x5)
-    dataset_path          : str = "../../NonoDataset"
-    orig_dataset_path     : str = os.path.join(dataset_path, f"{size}x{size}")
+    size:                   int = 5  # default size for a nonogram (5x5)
+    dataset_path:           str = "../../NonoDataset"
+    orig_dataset_path:      str = os.path.join(dataset_path, f"{size}x{size}")
     processed_dataset_path: str = "data/nonogram_dataset"
-    clues_max_num         : int = math.ceil(float(size)/2) # 5->3, 10->5, 15->8
-    num_aug               : int = 0
-    subsample_size_train  : Optional[int] = None
-    subsample_size_test   : Optional[int] = None
-    min_difficulty        : Optional[int] = None
-    
+    clues_max_num:          int = math.ceil(float(size) / 2)  # 5->3, 10->5, 15->8
+    num_aug:                int = 0
+    subsample_size_train:   Optional[int] = None
+    subsample_size_test:    Optional[int] = None
+    min_difficulty:         Optional[int] = None
+
+    @model_validator(mode='after')
+    def update_dependent_fields(self):
+        # This runs AFTER the size is set by the command line
+        self.orig_dataset_path = os.path.join(self.dataset_path, f"{self.size}x{self.size}")
+        self.clues_max_num = math.ceil(float(self.size) / 2)
+        return self
+
 def rm_dir(directory_path):
   if os.path.exists(directory_path):
       try:
@@ -41,11 +48,10 @@ def rm_dir(directory_path):
       print(f"Directory '{directory_path}' doesn't exist, no removal needed")
       
 def download_files(set_name, config: DataProcessConfig):
-  # If size dir already exists, remove it
-  rm_dir(config.processed_dataset_path)
-
+  print("Dataset in: ", config.orig_dataset_path)
   # Unzip all zip files
-  zip_files = glob.glob(os.path.join(config.orig_dataset_path, f"**{set_name}**/*.zip"), recursive=True)
+  zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
+  print(("Extracted zip files: ", zip_files), flush=True)
   for z_file in zip_files:
     try:
       with zipfile.ZipFile(z_file, 'r') as zip_ref:
@@ -56,16 +62,15 @@ def download_files(set_name, config: DataProcessConfig):
     except zipfile.BadZipFile:
       print(f"Skipping corrupted zip: {z_file}")
 
-  all_npz = glob.glob(os.path.join(config.orig_dataset_path, f"**{set_name}**/*.npz"), recursive=True)
-  os.makedirs(config.processed_dataset_path, exist_ok=False)
-  os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
+  all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
+  print(("Found npz files: ", all_npz), flush=True)
 
   # Loop through and load them
   for file_path in all_npz:
       filename = os.path.basename(file_path).lower()
 
-      # Only load relevant files
-      if 'database' in filename or 'backtracking' in filename:
+      # Only load relevant files from the required set
+      if ('database' in filename) or ('backtracking' in filename) or (f'{set_name}' not in filename):
         print(f"Skipping: {filename}")
         continue
 
@@ -79,11 +84,11 @@ def download_files(set_name, config: DataProcessConfig):
         indices          = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
         subsampled_array = array[indices]
         np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
-
+        print("Saved file: ", os.path.join(config.processed_dataset_path, "before_subsets", filename))
       except Exception as e:
         print(f"Error loading {filename}: {e}")
 
-  rm_dir(config.dataset_path)
+ # rm_dir(config.dataset_path)
 
   print("=" * 90)
   print(f"Finished downloading dataset with size {config.size}x{config.size}")
@@ -224,6 +229,12 @@ def convert_subset(set_name, config: DataProcessConfig):
 
 @cli.command(singleton=True)
 def preprocess_data(config: DataProcessConfig):
+    # If size dir already exists, remove it
+    rm_dir(config.processed_dataset_path)
+
+    os.makedirs(config.processed_dataset_path, exist_ok=False)
+    os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
+
     download_files("train", config)
     download_files("test", config)
     convert_subset("train", config)
