@@ -23,23 +23,27 @@ if [ "$DETECTED_GPUS" -eq 0 ]; then
 fi
 
 # Configuration
-SIZE=${1:-5}
-SUBSAMPLE_SIZE_TRAIN=${2:-1000}
-SUBSAMPLE_SIZE_TEST=${3:-200}
-EPOCHS_NUM=${4:-100}
-BATCH_SIZE=${5:-256}
-EVAL_INTERVAL=${6:-10}
-DATASET_PATH=$7
-PROCESSED_DATASET_PATH=$8
+TASK=${1:-"train"}  # Default to ARC-AGI-1
+SIZE=${2:-5}
+SUBSAMPLE_SIZE_TRAIN=${3:-1000}
+SUBSAMPLE_SIZE_TEST=${4:-200}
+EPOCHS_NUM=${5:-100}
+BATCH_SIZE=${6:-256}
+EVAL_INTERVAL=${7:-10}
+DATASET_PATH=$8
+PROCESSED_DATASET_PATH=$9
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 
 echo "=========================================="
 echo "TinyRecursiveModels Training & Evaluation"
 echo "=========================================="
 echo "Detected GPUs: $DETECTED_GPUS"
+echo "Task: $TASK"
 echo "Nonogram size: $SIZE X $SIZE"
-echo "Subsample size: $SUBSAMPLE_SIZE"
+echo "Subsample train size: SUBSAMPLE_SIZE_TRAIN"
+echo "Subsample test size: SUBSAMPLE_SIZE_TEST"
 echo "Epochs num: $EPOCHS_NUM"
+echo "Batch size: $BATCH_SIZE"
 echo "Eval interval: $EVAL_INTERVAL"
 echo "Using GPUs: $NUM_GPUS"
 echo "=========================================="
@@ -209,10 +213,21 @@ evaluate_model() {
 # Main Execution Logic
 # IMPORTANT: when re-running you may comment out the building dataset steps
 # ============================================================================
+case $TASK in
+    build)
+        build_nonogram_dataset
+        ;;
 
-build_nonogram_dataset
-train_nonogram
-evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+    train)
+        train_nonogram
+        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+        ;;
+
+    build_and_train)
+        build_nonogram_dataset
+        train_nonogram
+        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+        ;;
 
 echo "  $0 nonogram"
 
