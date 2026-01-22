@@ -58,18 +58,18 @@ def plot_nonogram_combined(board, clues_grid, title="Nonogram"):
         # Filter out zeros before joining
         cleaned_clues = [str(x) for x in row_clues[r] if x > 0]
         txt = " ".join(cleaned_clues)
-        ax.text(-0.6, r, txt, ha='right', va='center', fontsize=12, fontweight='bold')
+        ax.text(-0.6, r, txt, ha='right', va='center', fontsize=16, fontweight='bold')
 
     for c in range(cols):
         # Filter out zeros before joining
         cleaned_clues = [str(x) for x in col_clues[c] if x > 0]
         txt = "\n".join(cleaned_clues)
-        ax.text(c, -0.6, txt, ha='center', va='bottom', fontsize=12, fontweight='bold')
+        ax.text(c, -0.6, txt, ha='center', va='bottom', fontsize=16, fontweight='bold')
 
     for spine in ax.spines.values():
         spine.set_linewidth(2)
 
-    plt.title(title, pad=30)
+    plt.title(title, y=1.25, fontsize=18, fontweight='bold')
     plt.tight_layout()
     
     return fig

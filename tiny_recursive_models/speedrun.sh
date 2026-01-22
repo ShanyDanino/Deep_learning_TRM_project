@@ -29,21 +29,25 @@ SUBSAMPLE_SIZE_TRAIN=${3:-1000}
 SUBSAMPLE_SIZE_TEST=${4:-200}
 EPOCHS_NUM=${5:-100}
 BATCH_SIZE=${6:-256}
-EVAL_INTERVAL=${7:-10}
-DATASET_PATH=$8
-PROCESSED_DATASET_PATH=$9
-NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
+LEARNING_RATE=${7:-0.00005}
+EVAL_INTERVAL=${8:-10}
+DATASET_PATH=$9
+PROCESSED_DATASET_PATH=${10}
 
+NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
+CLUES_MAX_NUM=$(( ($SIZE + 1) / 2 ))
 echo "=========================================="
 echo "TinyRecursiveModels Training & Evaluation"
 echo "=========================================="
 echo "Detected GPUs: $DETECTED_GPUS"
 echo "Task: $TASK"
 echo "Nonogram size: $SIZE X $SIZE"
+echo "Max number of clues: $CLUES_MAX_NUM"
 echo "Subsample train size: $SUBSAMPLE_SIZE_TRAIN"
 echo "Subsample test size: $SUBSAMPLE_SIZE_TEST"
 echo "Epochs num: $EPOCHS_NUM"
 echo "Batch size: $BATCH_SIZE"
+echo "Learning rate: $LEARNING_RATE"
 echo "Eval interval: $EVAL_INTERVAL"
 echo "Using GPUs: $NUM_GPUS"
 echo "=========================================="
@@ -75,8 +79,8 @@ fi
 
 # Install PyTorch with CUDA 12.8 support
 echo "Installing PyTorch (CUDA 12.8)..."
-uv pip install --pre --upgrade torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu124
+#uv pip install --pre --upgrade torch torchvision torchaudio \
+#    --extra-index-url https://download.pytorch.org/whl/cu124
 
 echo "Installing numpy..."
 uv pip install "numpy<2.0.0"
@@ -139,23 +143,23 @@ train_nonogram() {
     local epoch_num=$EPOCHS_NUM
     local eval_interval=$EVAL_INTERVAL
     local nproc=$NUM_GPUS
-    
+
     echo "[Step 2/3] Training Nonogram model..."
     echo "Run name: $run_name"
     echo "Batch size: $batch_size"
     echo "GPUs: $nproc"
     echo ""
-    
+
     torchrun --nproc-per-node $nproc --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 \
         scripts/train.py \
         arch=trm \
         data_paths="[data/nonogram_dataset]" \
         evaluators="[]" \
         epochs=$epoch_num eval_interval=$eval_interval \
-        lr=2e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
+        lr=$LEARNING_RATE puzzle_emb_lr=$LEARNING_RATE weight_decay=0.05 puzzle_emb_weight_decay=0.05 \
         arch.L_layers=2 \
         arch.H_cycles=3 arch.L_cycles=6 \
-        lr_warmup_steps=4000 \
+        lr_warmup_steps=250 \
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True
@@ -177,23 +181,23 @@ evaluate_model() {
     local eval_name=$(basename $checkpoint_path)
     local nproc=$NUM_GPUS
     local batch_size=$BATCH_SIZE
-    
+
     echo "[Step 3/3] Evaluating model..."
     echo "Checkpoint: $checkpoint_path"
     echo "Dataset: $dataset_path"
     echo "Output directory: checkpoints/eval_${eval_name}"
     echo ""
-    
+
     # Find the latest checkpoint directory
     if [ -d "$checkpoint_path" ]; then
         # Look for the latest checkpoint subdirectory
         local latest_ckpt=$(find "$checkpoint_path" -name "step_*" | sort -V | tail -1)
-        
+
         if [ -z "$latest_ckpt" ]; then
             echo "WARNING: No checkpoint found in $checkpoint_path, skipping evaluation"
             return
         fi
-        
+
         torchrun --nproc-per-node=$nproc scripts/run_eval_only.py \
             --checkpoint "$latest_ckpt" \
             --dataset "$dataset_path" \
@@ -201,7 +205,7 @@ evaluate_model() {
             --eval-save-outputs inputs labels puzzle_identifiers preds \
             --global-batch-size $batch_size \
             --apply-ema
-        
+
         echo "Evaluation complete! Results saved to checkpoints/eval_${eval_name}"
     else
         echo "WARNING: Checkpoint path $checkpoint_path does not exist, skipping evaluation"
@@ -259,4 +263,3 @@ if command -v wandb &> /dev/null; then
     echo "  - View training metrics in W&B dashboard"
 fi
 echo "=========================================="
-

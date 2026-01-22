@@ -73,7 +73,9 @@ def download_files(set_name, config: DataProcessConfig):
         filename = os.path.basename(file_path).lower()
 
         # Only load relevant files from the required set
-        if ('database' in filename) or ('backtracking' in filename) or (f'{set_name}' not in filename):
+        #if ('database' in filename) or ('backtracking' in filename) or (f'{set_name}' not in filename):
+        if ('database' in filename) or ('backtracking' in filename):
+
             print(f"Skipping: {filename}")
             continue
 
@@ -86,7 +88,13 @@ def download_files(set_name, config: DataProcessConfig):
             num_samples_to_save = min(subsample_size, array.shape[0])
             indices = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
             subsampled_array = array[indices]
-            np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
+            if (config.size == 5):
+                if ('train' in filename):
+                    np.save(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"), subsampled_array)
+                elif ('target' in filename):
+                    np.save(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"), subsampled_array)
+            else:
+                np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
             print("Saved file: ", os.path.join(config.processed_dataset_path, "before_subsets", filename))
         except Exception as e:
             print(f"Error loading {filename}: {e}")
@@ -97,8 +105,8 @@ def download_files(set_name, config: DataProcessConfig):
 
 def load_files(set_name, config: DataProcessConfig):
     if config.size == 5:
-        clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", "train_combined.npz.npy"))
-        labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", "target_combined.npz.npy"))
+        clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
+        labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
     elif config.size == 10:
         clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
         labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
@@ -250,6 +258,7 @@ def preprocess_data(config: DataProcessConfig):
     # If size dir already exists, remove it
     rm_dir(config.processed_dataset_path)
 
+    print(("Creating dir: ", config.processed_dataset_path), flush=True)
     os.makedirs(config.processed_dataset_path, exist_ok=False)
     os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
 

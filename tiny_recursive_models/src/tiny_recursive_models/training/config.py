@@ -32,6 +32,10 @@ class PretrainConfig(pydantic.BaseModel):
     # Evaluators
     evaluators: List[EvaluatorConfig] = []
 
+    subsample_train_size: int
+    subsample_test_size: int
+    nonogram_size: int
+
     # Hyperparams
     global_batch_size: int
     epochs: int
