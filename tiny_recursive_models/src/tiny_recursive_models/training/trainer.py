@@ -28,6 +28,7 @@ from ..data.common import PuzzleDatasetMetadata
 from ..models.sparse_embedding import CastedSparseEmbeddingSignSGD_Distributed
 
 FIXED_VIS_BATCH = None
+PLOTTED_GT = False
 
 def visualize_training_step(train_state, batch, outputs):
     """
@@ -36,63 +37,69 @@ def visualize_training_step(train_state, batch, outputs):
     """
     try:
         if wandb.run is None: return
+        pred_images = []
+        truth_images = []
 
         # 1. Get Config & Data
         config = train_state.model.model.config
         size = config.size
         clues_max = config.clues_max_num
 
-        logits = outputs["logits"][0]  # Take 10 first examples in batch
-        pred_flat = torch.argmax(logits, dim=-1).cpu().numpy()
-        label_flat = batch["labels"][0].cpu().numpy()
+        for idx in range(10):
+            logits = outputs["logits"][idx]  # Take 10 first examples in batch
+            pred_flat = torch.argmax(logits, dim=-1).cpu().numpy()
+            label_flat = batch["labels"][idx].cpu().numpy()
 
-        # 2. Reshape Inputs (Clues)
-        raw_inputs = batch["inputs"][0].cpu().numpy()
-        reshaped_inputs = raw_inputs.reshape(size, size, 2, clues_max)
-        clues = reshaped_inputs - 1  # Restore (0 -> -1 padding)
+            # 2. Reshape Inputs (Clues)
+            raw_inputs = batch["inputs"][idx].cpu().numpy()
+            reshaped_inputs = raw_inputs.reshape(size, size, 2, clues_max)
+            clues = reshaped_inputs - 1  # Restore (0 -> -1 padding)
 
-        # 3. Process Labels (Auto-Detect Old vs New Dataset)
-        # This is critical to see the "Cheating" correctly
-        is_old_dataset = (np.max(label_flat) <= 1)
+            # 3. Process Labels (Auto-Detect Old vs New Dataset)
+            # This is critical to see the "Cheating" correctly
+            is_old_dataset = (np.max(label_flat) <= 1)
 
-        def normalize_board(arr):
-            # Output for Plotter: 1=Black, 0=White/Pad
-            b = np.zeros_like(arr)
-            if is_old_dataset:
-                b[arr == 0] = 1  # Old Buggy Data: 0 is Black
-            else:
+            def normalize_board(arr):
+                # Output for Plotter: 1=Black, 0=White/Pad
+                b = np.zeros_like(arr)
                 b[arr == 1] = 1  # New Correct Data: 1 is Black
-            return b.reshape(size, size)
+                return b.reshape(size, size)
 
-        pred_board = normalize_board(pred_flat)
-        label_board = normalize_board(label_flat)
+            pred_board = normalize_board(pred_flat)
+            label_board = normalize_board(label_flat)
 
-        # 4. Format Clues Object
-        clues_grid_obj = np.empty((size, size), dtype=object)
-        for r in range(size):
-            for c in range(size):
-                row_c = clues[r, c, 0, :].astype(int)
-                col_c = clues[r, c, 1, :].astype(int)
-                clues_grid_obj[r, c] = (row_c, col_c)
+            # 4. Format Clues Object
+            clues_grid_obj = np.empty((size, size), dtype=object)
+            for r in range(size):
+                for c in range(size):
+                    row_c = clues[r, c, 0, :].astype(int)
+                    col_c = clues[r, c, 1, :].astype(int)
+                    clues_grid_obj[r, c] = (row_c, col_c)
 
-        # 6. Plot Prediction
-        fig_pred = plot_nonogram_combined(
-            pred_board,
-            clues_grid_obj,
-            title=f"Pred (Step {train_state.step})]"
-        )
-        wandb.log({"train/live_pred": wandb.Image(fig_pred)}, step=train_state.step)
-        plt.close(fig_pred)
+            # 6. Plot Prediction
+            fig_pred = plot_nonogram_combined(
+                pred_board,
+                clues_grid_obj,
+                title=f"Pred #{idx} (Step {train_state.step})]"
+            )
 
-        # 7. Plot Truth (To compare)
-        fig_truth = plot_nonogram_combined(
-            label_board,
-            clues_grid_obj,
-            title="Ground Truth"
-        )
-        wandb.log({"train/live_truth": wandb.Image(fig_truth)}, step=train_state.step)
-        plt.close(fig_truth)
+            pred_images.append(wandb.Image(fig_pred, caption=f"Pred #{idx}"))
+            plt.close(fig_pred)
 
+            global PLOTTED_GT
+            if not PLOTTED_GT:
+                # 7. Plot Truth (To compare)
+                fig_truth = plot_nonogram_combined(
+                    label_board,
+                    clues_grid_obj,
+                    title="Ground Truth #{idx}"
+                )
+                truth_images.append(wandb.Image(fig_truth, caption=f"Ground Truth #{idx}"))
+                plt.close(fig_truth)
+                PLOTTED_GT = True
+
+        wandb.log({"train/live_pred": pred_images}, step=train_state.step)
+        wandb.log({"train/ground_truth": truth_images}, step=train_state.step)
         print(f"[Visualizer] Logged Step {train_state.step} to WandB")
 
     except Exception as e:
@@ -103,7 +110,7 @@ def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size:
     
     Args:
         config: Training configuration
-        split: 'train' or 'test'
+        split: 'train', 'valid' or 'test'
         rank: Current process rank
         world_size: Total number of processes
         **kwargs: Additional arguments for PuzzleDatasetConfig
@@ -113,7 +120,7 @@ def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size:
     """
     dataset = PuzzleDataset(PuzzleDatasetConfig(
         seed=config.seed,
-        dataset_paths=config.data_paths_test if len(config.data_paths_test) > 0 and split == "test" else config.data_paths,
+        dataset_paths=config.data_paths_test if len(config.data_paths_test) > 0 and split in ["valid", "test"] else config.data_paths,
         rank=rank,
         num_replicas=world_size,
         **kwargs
