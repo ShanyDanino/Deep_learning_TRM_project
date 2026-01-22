@@ -34,7 +34,7 @@ class PretrainConfig(pydantic.BaseModel):
 
     subsample_train_size: int
     subsample_test_size: int
-    nonogram_size: int
+    nonogram_size: str
 
     # Hyperparams
     global_batch_size: int
