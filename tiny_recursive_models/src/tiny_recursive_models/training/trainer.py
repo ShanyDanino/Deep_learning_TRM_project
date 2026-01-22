@@ -45,6 +45,8 @@ def visualize_training_step(train_state, batch, outputs):
         size = config.size
         clues_max = config.clues_max_num
 
+        global PLOTTED_GT
+
         for idx in range(10):
             logits = outputs["logits"][idx]  # Take 10 first examples in batch
             pred_flat = torch.argmax(logits, dim=-1).cpu().numpy()
@@ -86,7 +88,6 @@ def visualize_training_step(train_state, batch, outputs):
             pred_images.append(wandb.Image(fig_pred, caption=f"Pred #{idx}"))
             plt.close(fig_pred)
 
-            global PLOTTED_GT
             if not PLOTTED_GT:
                 # 7. Plot Truth (To compare)
                 fig_truth = plot_nonogram_combined(
@@ -96,11 +97,17 @@ def visualize_training_step(train_state, batch, outputs):
                 )
                 truth_images.append(wandb.Image(fig_truth, caption=f"Ground Truth #{idx}"))
                 plt.close(fig_truth)
-                PLOTTED_GT = True
 
-        wandb.log({"train/live_pred": pred_images}, step=train_state.step)
-        wandb.log({"train/ground_truth": truth_images}, step=train_state.step)
+        log_payload = {"train/live_pred": pred_images}
+
+        # Only plot ground truth once
+        if not PLOTTED_GT and len(truth_images) > 0:
+            log_payload["train/ground_truth"] = truth_images
+            PLOTTED_GT = True
+
+        wandb.log(log_payload, step=train_state.step)
         print(f"[Visualizer] Logged Step {train_state.step} to WandB")
+
 
     except Exception as e:
         print(f"[Visualizer Error] {e}")
