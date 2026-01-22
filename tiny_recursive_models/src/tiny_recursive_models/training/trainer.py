@@ -344,7 +344,7 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
     return_keys = ["logits"] if should_log else []
 
     # Forward
-    train_state.carry, loss, metrics, outputs, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=[])
+    train_state.carry, loss, metrics, outputs, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=return_keys)
 
     ((1 / global_batch_size) * loss).backward()
 

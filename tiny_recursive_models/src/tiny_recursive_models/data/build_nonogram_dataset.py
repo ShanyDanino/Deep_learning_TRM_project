@@ -86,8 +86,11 @@ def download_files(set_name, config: DataProcessConfig):
             total_in_file = array.shape[0]
             subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_test
             num_samples_to_save = min(subsample_size, array.shape[0])
+
+            np.random.seed(42)
             indices = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
             subsampled_array = array[indices]
+            
             if (config.size == 5):
                 if ('train' in filename):
                     np.save(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"), subsampled_array)
