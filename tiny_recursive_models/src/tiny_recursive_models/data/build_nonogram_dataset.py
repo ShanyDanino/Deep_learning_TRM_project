@@ -22,8 +22,7 @@ cli = ArgParser()
 
 class DataProcessConfig(BaseModel):
     size: int = 5  # default size for a nonogram (5x5)
-    dataset_path: str = "../../NonoDataset"
-    orig_dataset_path: str = os.path.join(dataset_path, f"{size}x{size}")
+    dataset_path: str = "../../uniform_dataset"
     processed_dataset_path: str = "data/nonogram_dataset"
     clues_max_num: int = math.ceil(float(size) / 2)  # 5->3, 10->5, 15->8
     num_aug: int = 0
@@ -34,7 +33,6 @@ class DataProcessConfig(BaseModel):
     @model_validator(mode='after')
     def update_dependent_fields(self):
         # This runs AFTER the size is set by the command line
-        self.orig_dataset_path = os.path.join(self.dataset_path, f"{self.size}x{self.size}")
         self.clues_max_num = math.ceil(float(self.size) / 2)
         return self
 
@@ -51,7 +49,7 @@ def rm_dir(directory_path):
 
 
 def load_files(set_name, config: DataProcessConfig):
-    dir_path = os.path.join(config.processed_dataset_path, f"{config.size}x{config.size}", f"{set_name}")
+    dir_path = os.path.join(config.dataset_path, f"{config.size}x{config.size}", f"{set_name}")
     clues = np.load(os.path.join(dir_path, f"x_dataset.npy"))
     labels = np.load(os.path.join(dir_path, f"y_dataset.npy"))
 
@@ -182,10 +180,6 @@ def preprocess_data(config: DataProcessConfig):
 
     convert_subset("train", config)
     convert_subset("test", config)
-
-    rm_dir(os.path.join(config.processed_dataset_path, "before_subsets"))
-    rm_dir(config.dataset_path)
-
 
 if __name__ == "__main__":
     cli()
