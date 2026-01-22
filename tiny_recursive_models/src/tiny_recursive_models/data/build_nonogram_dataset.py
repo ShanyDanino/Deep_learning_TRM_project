@@ -50,77 +50,17 @@ def rm_dir(directory_path):
         print(f"Directory '{directory_path}' doesn't exist, no removal needed")
 
 
-def download_files(set_name, config: DataProcessConfig):
-    print("Dataset in: ", config.orig_dataset_path)
-    # Unzip all zip files
-    zip_files = glob.glob(os.path.join(config.orig_dataset_path, "**/*.zip"), recursive=True)
-    print(("Extracted zip files: ", zip_files), flush=True)
-    for z_file in zip_files:
-        try:
-            with zipfile.ZipFile(z_file, 'r') as zip_ref:
-                # Extract to the specific folder where the zip is located
-                extract_to_path = os.path.join(config.orig_dataset_path, f"{config.size}x{config.size}")
-                zip_ref.extractall(extract_to_path)
-                print(f"Extracted: {os.path.basename(z_file)}")
-        except zipfile.BadZipFile:
-            print(f"Skipping corrupted zip: {z_file}")
-
-    all_npz = glob.glob(os.path.join(config.orig_dataset_path, "**/*.npz"), recursive=True)
-    print(("Found npz files: ", all_npz), flush=True)
-
-    # Loop through and load them
-    for file_path in all_npz:
-        filename = os.path.basename(file_path).lower()
-
-        # Only load relevant files from the required set
-        #if ('database' in filename) or ('backtracking' in filename) or (f'{set_name}' not in filename):
-        if ('database' in filename) or ('backtracking' in filename):
-
-            print(f"Skipping: {filename}")
-            continue
-
-        try:
-            data = np.load(file_path, allow_pickle=True)
-            array = next(iter(data.values()))
-
-            total_in_file = array.shape[0]
-            subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_test
-            num_samples_to_save = min(subsample_size, array.shape[0])
-
-            np.random.seed(42)
-            indices = np.random.choice(total_in_file, size=num_samples_to_save, replace=False)
-            subsampled_array = array[indices]
-
-            if (config.size == 5):
-                if ('train' in filename):
-                    np.save(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"), subsampled_array)
-                elif ('target' in filename):
-                    np.save(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"), subsampled_array)
-            else:
-                np.save(os.path.join(config.processed_dataset_path, "before_subsets", filename), subsampled_array)
-            print("Saved file: ", os.path.join(config.processed_dataset_path, "before_subsets", filename))
-        except Exception as e:
-            print(f"Error loading {filename}: {e}")
-
-    print("=" * 90)
-    print(f"Finished downloading dataset with size {config.size}x{config.size}")
-
-
 def load_files(set_name, config: DataProcessConfig):
-    if config.size == 5:
-        clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
-        labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
-    elif config.size == 10:
-        clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_dataset.npz.npy"))
-        labels = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_dataset.npz.npy"))
-    elif config.size == 15:
-        clues = np.load(os.path.join(config.processed_dataset_path, "before_subsets", f"x_{set_name}_15x15_ok.npz.npy"))
-        labels = np.load(
-            os.path.join(config.processed_dataset_path, "before_subsets", f"y_{set_name}_15x15_ok.npz.npy"))
+    dir_path = os.path.join(config.processed_dataset_path, f"{config.size}x{config.size}", f"{set_name}")
+    clues = np.load(os.path.join(dir_path, f"x_dataset.npy"))
+    labels = np.load(os.path.join(dir_path, f"y_dataset.npy"))
 
-    nonograms_number = clues.shape[0]
-    parsed_clues = clues.reshape(nonograms_number, 2, config.size, config.clues_max_num)
-    parsed_labels = labels.reshape(nonograms_number, config.size, config.size)
+    subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_test
+    subsampled_clues = clues[:subsample_size]
+    subsampled_labels = labels[:subsample_size]
+
+    parsed_clues = subsampled_clues.reshape(subsample_size, 2, config.size, config.clues_max_num)
+    parsed_labels = subsampled_labels.reshape(subsample_size, config.size, config.size)
 
     return broadcast_nonogram_clues(parsed_clues, config), parsed_labels
 
@@ -146,21 +86,6 @@ def broadcast_nonogram_clues(parsed_clues, config: DataProcessConfig):
     return np.stack([row_grid, col_grid], axis=3)
 
 
-def augment_nonogram(row_clues: np.ndarray, col_clues: np.ndarray, solution: np.ndarray):
-    # Create a random rotated version of the solution
-    k = np.random.randint(4)  # number of times the board will be rotated
-    rotated_solution = np.rot90(solution, k)
-    rotated_row_clues = np.rot90(row_clues, k)
-    rotated_col_clues = np.rot90(col_clues, k)
-
-    # Transpose (Swap Rows <-> Cols)
-    if np.random.rand() < 0.5:
-        rotated_row_clues, rotated_col_clues = rotated_row_clues, rotated_col_clues
-        rotated_solution = rotated_solution.T
-
-    return rotated_row_clues, rotated_col_clues, rotated_solution
-
-
 def convert_subset(set_name, config: DataProcessConfig):
     # Load and process clues into your requested 5D shape
     inputs, labels = load_files(set_name, config)
@@ -175,25 +100,15 @@ def convert_subset(set_name, config: DataProcessConfig):
     results["group_indices"].append(0)
 
     for i in tqdm(range(len(inputs)), desc=f"Processing {set_name}"):
-        orig_inp = inputs[i]
-        orig_out = labels[i]
+        # Flatten to 1D sequence for TRM architecture
+        results["inputs"].append(inputs[i].flatten())
+        results["labels"].append(labels[i].flatten())
 
-        for aug_idx in range(1 + num_augments):
-            if aug_idx == 0:
-                inp, out = orig_inp, orig_out
-            else:
-                # Use the augmentation logic we discussed earlier
-                inp, out = augment_nonogram(orig_inp, orig_out)
+        example_id += 1
+        puzzle_id += 1
 
-            # Flatten to 1D sequence for TRM architecture
-            results["inputs"].append(inp.flatten())
-            results["labels"].append(out.flatten())
-
-            example_id += 1
-            puzzle_id += 1
-
-            results["puzzle_indices"].append(example_id)
-            results["puzzle_identifiers"].append(0)
+        results["puzzle_indices"].append(example_id)
+        results["puzzle_identifiers"].append(0)
 
         # Push group boundary (tracks original + all its augments)
         results["group_indices"].append(puzzle_id)
@@ -264,9 +179,6 @@ def preprocess_data(config: DataProcessConfig):
     print(("Creating dir: ", config.processed_dataset_path), flush=True)
     os.makedirs(config.processed_dataset_path, exist_ok=False)
     os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
-
-    download_files("train", config)
-    download_files("test", config)
 
     convert_subset("train", config)
     convert_subset("test", config)
