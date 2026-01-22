@@ -7,10 +7,14 @@ import torch
 import torch.distributed as dist
 from torch import nn
 from torch.utils.data import DataLoader
+import wandb
+import matplotlib.pyplot as plt
+import numpy as np
 
 from .config import PretrainConfig, TrainState
 from .checkpoint import load_checkpoint
 from ..utils import load_model_class
+from ..evaluation.evaluator import plot_nonogram_combined
 
 # Import optimizer from our vendored implementation
 try:
@@ -23,6 +27,75 @@ from ..data.puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig
 from ..data.common import PuzzleDatasetMetadata
 from ..models.sparse_embedding import CastedSparseEmbeddingSignSGD_Distributed
 
+
+def visualize_training_step(train_state, batch, outputs):
+    """
+    Takes a snapshot of the current training batch and logs it to WandB.
+    Automatically handles label mapping so you can see 'cheating'.
+    """
+    try:
+        if wandb.run is None: return
+
+        # 1. Get Config & Data
+        config = train_state.model.model.config
+        size = config.size
+        clues_max = config.clues_max_num
+
+        logits = outputs["logits"][0]  # Take 1st example in batch
+        pred_flat = torch.argmax(logits, dim=-1).cpu().numpy()
+        label_flat = batch["labels"][0].cpu().numpy()
+
+        # 2. Reshape Inputs (Clues)
+        raw_inputs = batch["inputs"][0].cpu().numpy()
+        reshaped_inputs = raw_inputs.reshape(size, size, 2, clues_max)
+        clues = reshaped_inputs - 1  # Restore (0 -> -1 padding)
+
+        # 3. Process Labels (Auto-Detect Old vs New Dataset)
+        # This is critical to see the "Cheating" correctly
+        is_old_dataset = (np.max(label_flat) <= 1)
+
+        def normalize_board(arr):
+            # Output for Plotter: 1=Black, 0=White/Pad
+            b = np.zeros_like(arr)
+            if is_old_dataset:
+                b[arr == 0] = 1  # Old Buggy Data: 0 is Black
+            else:
+                b[arr == 1] = 1  # New Correct Data: 1 is Black
+            return b.reshape(size, size)
+
+        pred_board = normalize_board(pred_flat)
+        label_board = normalize_board(label_flat)
+
+        # 4. Format Clues Object
+        clues_grid_obj = np.empty((size, size), dtype=object)
+        for r in range(size):
+            for c in range(size):
+                row_c = clues[r, c, 0, :].astype(int)
+                col_c = clues[r, c, 1, :].astype(int)
+                clues_grid_obj[r, c] = (row_c, col_c)
+
+        # 6. Plot Prediction
+        fig_pred = plot_nonogram_combined(
+            pred_board,
+            clues_grid_obj,
+            title=f"Pred (Step {train_state.step})]"
+        )
+        wandb.log({"train/live_pred": wandb.Image(fig_pred)}, step=train_state.step)
+        plt.close(fig_pred)
+
+        # 7. Plot Truth (To compare)
+        fig_truth = plot_nonogram_combined(
+            label_board,
+            clues_grid_obj,
+            title="Ground Truth"
+        )
+        wandb.log({"train/live_truth": wandb.Image(fig_truth)}, step=train_state.step)
+        plt.close(fig_truth)
+
+        print(f"[Visualizer] Logged Step {train_state.step} to WandB")
+
+    except Exception as e:
+        print(f"[Visualizer Error] {e}")
 
 def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size: int, **kwargs):
     """Create a DataLoader for training or evaluation.
@@ -267,8 +340,11 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
         with torch.device("cuda"):
             train_state.carry = train_state.model.initial_carry(batch)  # type: ignore
 
+    should_log = (train_state.step % 500 == 0) and (rank == 0)
+    return_keys = ["logits"] if should_log else []
+
     # Forward
-    train_state.carry, loss, metrics, _, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=[])
+    train_state.carry, loss, metrics, outputs, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=[])
 
     ((1 / global_batch_size) * loss).backward()
 
@@ -288,6 +364,9 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
             
         optim.step()
         optim.zero_grad()
+
+    if should_log:
+        visualize_training_step(train_state, batch, outputs)
 
     # Reduce metrics
     if len(metrics):
