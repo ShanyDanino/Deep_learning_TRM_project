@@ -27,7 +27,7 @@ class DataProcessConfig(BaseModel):
     clues_max_num: int = math.ceil(float(size) / 2)  # 5->3, 10->5, 15->8
     num_aug: int = 0
     subsample_size_train: Optional[int] = None
-    subsample_size_test: Optional[int] = None
+    subsample_size_valid: Optional[int] = None # for both valid and test sets
     min_difficulty: Optional[int] = None
 
     @model_validator(mode='after')
@@ -53,7 +53,7 @@ def load_files(set_name, config: DataProcessConfig):
     clues = np.load(os.path.join(dir_path, f"x_dataset.npy"))
     labels = np.load(os.path.join(dir_path, f"y_dataset.npy"))
 
-    subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_test
+    subsample_size = config.subsample_size_train if set_name == "train" else config.subsample_size_valid
     subsampled_clues = clues[:subsample_size]
     subsampled_labels = labels[:subsample_size]
 
@@ -176,9 +176,9 @@ def preprocess_data(config: DataProcessConfig):
 
     print(("Creating dir: ", config.processed_dataset_path), flush=True)
     os.makedirs(config.processed_dataset_path, exist_ok=False)
-    os.makedirs(os.path.join(config.processed_dataset_path, "before_subsets"), exist_ok=False)
 
     convert_subset("train", config)
+    convert_subset("valid", config)
     convert_subset("test", config)
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ echo "Task: $TASK"
 echo "Nonogram size: $SIZE X $SIZE"
 echo "Max number of clues: $CLUES_MAX_NUM"
 echo "Subsample train size: $SUBSAMPLE_SIZE_TRAIN"
-echo "Subsample test size: $SUBSAMPLE_SIZE_TEST"
+echo "Subsample validation and test size: $SUBSAMPLE_SIZE_TEST"
 echo "Epochs num: $EPOCHS_NUM"
 echo "Batch size: $BATCH_SIZE"
 echo "Learning rate: $LEARNING_RATE"
@@ -126,7 +126,7 @@ build_nonogram_dataset() {
     python -u -m src.tiny_recursive_models.data.build_nonogram_dataset \
         --size $SIZE \
         --subsample-size-train $SUBSAMPLE_SIZE_TRAIN \
-		--subsample-size-test $SUBSAMPLE_SIZE_TEST \
+		--subsample-size-valid $SUBSAMPLE_SIZE_TEST \
 		--dataset-path $DATASET_PATH \
 		--processed-dataset-path $PROCESSED_DATASET_PATH
     echo "Nonogram with size $SIZE X $SIZE dataset built successfully!"
