@@ -27,6 +27,7 @@ from ..data.puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig
 from ..data.common import PuzzleDatasetMetadata
 from ..models.sparse_embedding import CastedSparseEmbeddingSignSGD_Distributed
 
+FIXED_VIS_BATCH = None
 
 def visualize_training_step(train_state, batch, outputs):
     """
@@ -41,7 +42,7 @@ def visualize_training_step(train_state, batch, outputs):
         size = config.size
         clues_max = config.clues_max_num
 
-        logits = outputs["logits"][0]  # Take 1st example in batch
+        logits = outputs["logits"][0]  # Take 10 first examples in batch
         pred_flat = torch.argmax(logits, dim=-1).cpu().numpy()
         label_flat = batch["labels"][0].cpu().numpy()
 
@@ -335,6 +336,13 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
     # To device
     batch = {k: v.cuda() for k, v in batch.items()}
 
+    global FIXED_VIS_BATCH
+    if FIXED_VIS_BATCH is None:
+        # Save a copy of this batch to use for visualization
+        FIXED_VIS_BATCH = {k: v.cuda().detach().clone() for k, v in batch.items()}
+        if rank == 0:
+            print(f"[Visualizer] Captured Fixed Batch for visualization.")
+
     # Init carry if it is None
     if train_state.carry is None:
         with torch.device("cuda"):
@@ -366,7 +374,10 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
         optim.zero_grad()
 
     if should_log:
-        visualize_training_step(train_state, batch, outputs)
+        with torch.no_grad():
+            vis_carry = train_state.model.initial_carry(FIXED_VIS_BATCH)
+            _, _, _, vis_outputs, _ = train_state.model(carry=vis_carry, batch=FIXED_VIS_BATCH, return_keys=["logits"])
+        visualize_training_step(train_state, FIXED_VIS_BATCH, vis_outputs)
 
     # Reduce metrics
     if len(metrics):
