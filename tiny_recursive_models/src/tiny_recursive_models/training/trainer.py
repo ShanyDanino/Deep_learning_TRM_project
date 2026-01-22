@@ -375,7 +375,7 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
 
     if should_log:
         with torch.no_grad():
-            with torch.device("cude"):
+            with torch.device("cuda"):
                 vis_carry = train_state.model.initial_carry(FIXED_VIS_BATCH)
             _, _, _, vis_outputs, _ = train_state.model(carry=vis_carry, batch=FIXED_VIS_BATCH, return_keys=["logits"])
         visualize_training_step(train_state, FIXED_VIS_BATCH, vis_outputs)
