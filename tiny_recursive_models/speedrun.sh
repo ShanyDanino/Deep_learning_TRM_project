@@ -155,7 +155,7 @@ train_nonogram() {
         scripts/train.py \
         arch=trm \
         data_paths="[data/nonogram_dataset]" \
-        #evaluators="[]" \
+        evaluators="[]" \
         epochs=$epoch_num eval_interval=$eval_interval \
         lr=$LEARNING_RATE puzzle_emb_lr=$LEARNING_RATE weight_decay=0.05 puzzle_emb_weight_decay=0.05 \
         arch.L_layers=2 \
@@ -164,6 +164,8 @@ train_nonogram() {
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True \
+        subsample-train-size=$SUBSAMPLE_SIZE_TRAIN \
+        subsample-valid-size=$SUBSAMPLE_SIZE_TEST \
         $EXTRA_ARGS
 
     echo "Nonogram training complete!"
