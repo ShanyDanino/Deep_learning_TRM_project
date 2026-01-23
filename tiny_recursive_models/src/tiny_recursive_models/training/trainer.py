@@ -362,7 +362,7 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
         with torch.device("cuda"):
             train_state.carry = train_state.model.initial_carry(batch)  # type: ignore
 
-    should_log = (train_state.step % 50 == 0) and (rank == 0)
+    should_log = (train_state.step % 500 == 0) and (rank == 0)
     return_keys = ["logits"] if should_log else []
 
     # Forward
