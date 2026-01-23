@@ -157,7 +157,7 @@ train_nonogram() {
         data_paths="[data/nonogram_dataset]" \
         evaluators="[]" \
         epochs=$epoch_num eval_interval=$eval_interval \
-        lr=$LEARNING_RATE puzzle_emb_lr=$LEARNING_RATE weight_decay=0.05 puzzle_emb_weight_decay=0.05 \
+        lr=$LEARNING_RATE puzzle_emb_lr=$LEARNING_RATE weight_decay=0.15 puzzle_emb_weight_decay=0.15 \
         arch.L_layers=2 \
         arch.H_cycles=3 arch.L_cycles=6 \
         lr_warmup_steps=250 \
