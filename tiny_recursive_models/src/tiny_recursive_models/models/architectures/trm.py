@@ -128,9 +128,9 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
 
         # Added code to adjust to nonograms
         self.clue_encoder = nn.Sequential(
-            CastedLinear(((self.config.size ** 2) * 2 * self.config.clues_max_num), (2 * self.config.hidden_size), bias=True), # (H * W * 2 * clues_max_num, hidden_size)
+            CastedLinear(((self.config.size ** 2) * 2 * self.config.clues_max_num), 64, bias=True), # (H * W * 2 * clues_max_num, 64)
             nn.ReLU(),
-            CastedLinear((2 * self.config.hidden_size), ((self.config.size ** 2) * self.config.hidden_size), bias=True)
+            CastedLinear(64, ((self.config.size ** 2) * self.config.hidden_size), bias=True)
         )
 
         # Initialization logic
