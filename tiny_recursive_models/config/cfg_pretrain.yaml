@@ -14,6 +14,10 @@ data_paths_test: []
 evaluators:
   - name: arc@ARC
 
+# Dataset sizes
+subsample_train_size: 5000
+subsample_test_size: 500
+
 # Hyperparams - Training
 global_batch_size: 768
 
