@@ -33,6 +33,7 @@ LEARNING_RATE=${7:-0.00005}
 EVAL_INTERVAL=${8:-10}
 DATASET_PATH=$9
 PROCESSED_DATASET_PATH=${10}
+EXTRA_ARGS="${@:11}"
 
 NUM_GPUS=$DETECTED_GPUS  # Use all available GPUs
 CLUES_MAX_NUM=$(( ($SIZE + 1) / 2 ))
@@ -154,7 +155,7 @@ train_nonogram() {
         scripts/train.py \
         arch=trm \
         data_paths="[data/nonogram_dataset]" \
-        evaluators="[]" \
+        #evaluators="[]" \
         epochs=$epoch_num eval_interval=$eval_interval \
         lr=$LEARNING_RATE puzzle_emb_lr=$LEARNING_RATE weight_decay=0.05 puzzle_emb_weight_decay=0.05 \
         arch.L_layers=2 \
@@ -162,10 +163,19 @@ train_nonogram() {
         lr_warmup_steps=250 \
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
-        +run_name=${run_name} ema=True
+        +run_name=${run_name} ema=True \
+        $EXTRA_ARGS
 
     echo "Nonogram training complete!"
     LAST_CHECKPOINT="checkpoints/Nonogram_dataset-ACT-torch/${run_name}"
+
+    # Use a heuristic: if checkpoint_path was passed, try to use it for evaluation
+    if [[ "$EXTRA_ARGS" == *"checkpoint_path="* ]]; then
+        # Extract the path from arguments (simple grep)
+        local custom_path=$(echo $EXTRA_ARGS | grep -oP 'checkpoint_path=\K[^ ]+')
+        LAST_CHECKPOINT=$custom_path
+    fi
+
     echo "Last checkpoint: $LAST_CHECKPOINT"
     LAST_DATASET="data/nonogram_dataset"
     echo ""
@@ -239,6 +249,11 @@ case $TASK in
     build_and_train)
         build_nonogram_dataset
         train_nonogram
+        evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
+        echo "  $0 nonogram"
+        ;;
+
+    eval)
         evaluate_model "$LAST_CHECKPOINT" "$LAST_DATASET"
         echo "  $0 nonogram"
         ;;
