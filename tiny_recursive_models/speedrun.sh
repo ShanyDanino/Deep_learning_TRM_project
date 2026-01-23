@@ -164,8 +164,8 @@ train_nonogram() {
         global_batch_size=$batch_size \
         checkpoint_every_eval=True \
         +run_name=${run_name} ema=True \
-        +subsample_train_size=$SUBSAMPLE_SIZE_TRAIN \
-        +subsample_valid_size=$SUBSAMPLE_SIZE_TEST \
+        subsample_train_size=$SUBSAMPLE_SIZE_TRAIN \
+        subsample_test_size=$SUBSAMPLE_SIZE_TEST \
         $EXTRA_ARGS
 
     echo "Nonogram training complete!"
