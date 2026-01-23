@@ -59,7 +59,7 @@ class PretrainConfig(pydantic.BaseModel):
     checkpoint_path: Optional[str] = None
 
     # Extras
-    seed: int = 0
+    seed: int = 10
     checkpoint_every_eval: bool = False
     eval_interval: Optional[int] = None
     min_eval_interval: Optional[int] = 0  # when to start eval

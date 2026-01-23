@@ -3,7 +3,7 @@ loss:
   name: losses@ACTLossHead
   loss_type: binary_cross_entropy
 
-halt_exploration_prob: 0.5
+halt_exploration_prob: 0.8
 halt_max_steps: 16
 
 H_cycles: 3
