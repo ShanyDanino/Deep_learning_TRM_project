@@ -93,7 +93,7 @@ def save_split(size_name, x_data, y_data):
 
 def rearrange_dataset():
     # --- Process 5x5 ---
-    # Issue: x is 'train_combined', y is 'target_combined'
+    # x is 'train_combined', y is 'target_combined'
     x_5 = load_npy_data(os.path.join(SOURCE_DIR, "5x5", "train_combined.zip"))
     y_5 = load_npy_data(os.path.join(SOURCE_DIR, "5x5", "target_combined.npz"))
     save_split("5x5", x_5, y_5)
