@@ -123,4 +123,3 @@ def rearrange_dataset():
     save_split("15x15", x_15_full, y_15_full)
 
     print("\nProcessing complete. Check 'uniform_dataset/' folder.")
-
