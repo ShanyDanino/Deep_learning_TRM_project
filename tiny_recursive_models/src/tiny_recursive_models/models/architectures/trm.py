@@ -296,8 +296,8 @@ class TinyRecursiveReasoningModel_ACTV1(nn.Module):
             halted = is_last_step
 
             # if training, and ACT is enabled
-            # if self.training and (self.config.halt_max_steps > 1):
-            if False:
+            # disable ACT for any nonogram larger than 5X5
+            if self.training and (self.config.halt_max_steps > 1) and (self.config.size <= 5):
 
                 # Halt signal
                 # NOTE: During evaluation, always use max steps, this is to guarantee the same halting steps inside a batch for batching purposes
