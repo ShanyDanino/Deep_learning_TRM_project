@@ -1,4 +1,4 @@
-# Recursive Nonogram Reasoner – "NonoReason"
+# Recursive Nonogram Reasoner - "NonoReason"
 ​
 **NonoReason** explores the potential of compact AI models to solve Nonograms, a logic puzzle, through recursive reasoning.
 
@@ -6,8 +6,11 @@
 > **A. Jolicoeur-Martineau**, *"Less is more: Recursive reasoning with tiny networks"*, arXiv preprint arXiv:2510.04871 (2025).
 
 ## 📌 Project Overview
-The goal of this project is to develop a recursive deep learning model capable of solving Nonograms—logic puzzles defined by row and column constraints.  NonoReason utilizes a **recursive reasoning architecture**. It solves the grid step-by-step, constantly cross-referencing constraints to verify and deduce the next move.
-![Training_process](https://github.com/user-attachments/assets/ff26ad8c-eb5a-45d4-9338-0206d07076c1)
+The goal of this project is to develop a recursive deep learning model capable of solving Nonograms-logic puzzles defined by row and column constraints. NonoReason utilizes a **recursive reasoning architecture**. It solves the grid step-by-step, constantly cross-referencing constraints to verify and deduce the next move.
+
+
+![nonogram_compare_final](https://github.com/user-attachments/assets/2ca1361d-89c0-438f-b880-0d80e1424032)
+
 
 ## 📊 Dataset
 We utilize the Nonogram dataset originally published in the paper:
