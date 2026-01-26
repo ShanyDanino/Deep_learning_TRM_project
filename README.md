@@ -54,7 +54,8 @@ The file `Project_run.ipynb` is designed to handle the entire setup pipeline, in
 2.  **Set Secrets:** If using Colab, add the following to your "Secrets" (key icon):
     * `GITHUB_TOKEN`: Your GitHub personal access token (to clone the repo).
     * `WANDB_API_KEY`: Your Weights & Biases API key.
-3.  **Run All Cells:** The notebook will:
+3.  Fill username with your Github Username. 
+4.  **Run All Cells:** The notebook will:
     * Clone the repository.
     * Install dependencies via `uv`.
     * Download the dataset (`NonoDataset`).
@@ -64,22 +65,28 @@ The file `Project_run.ipynb` is designed to handle the entire setup pipeline, in
 
 ### Option 2: Using the Automation Script (`speedrun.sh`)
 For advanced users or local terminal execution, `speedrun.sh` provides a "one-click" solution with customizable parameters.
+Before running `speedrun.sh`, you should download the dataset using `download_dataset.py`.
 
 **Basic Command:**
 ```bash
 chmod +x speedrun.sh
 ./speedrun.sh [TASK] [SIZE] [TRAIN_NUM] [TEST_NUM] [EPOCHS] [BATCH] [LR] [EVAL_INT] [RAW_DATA_PATH] [PROC_DATA_PATH]
 
-Parameter,Default,Example,Description
-TASK,train,build_and_train,"The operation to perform. Options: build, train, eval, build_and_train."
-SIZE,5,10,"The grid size of the Nonogram (e.g., 5 for 5x5, 10 for 10x10)."
-TRAIN_NUM,1000,50000,Number of samples to use for training (subsampling).
-TEST_NUM,200,5000,Number of samples to use for testing/validation.
-EPOCHS,100,50,Total number of training epochs.
-BATCH,256,128,Batch size per step.
-LR,5e-5,1e-4,Learning rate.
-EVAL_INT,10,5,How often (in epochs) to run evaluation and log images.
-RAW_DATA,-,../../NonoDataset,Path to the raw downloaded NonoDataset.
-PROC_DATA,-,data/nonogram_10x10,Path where the processed 5D tensors should be saved.
+### Parameters Examples
+
+| Parameter | Default | Example | Description |
+| :--- | :--- | :--- | :--- |
+| `TASK` | `train` | `build_and_train` | The operation to perform. Options: `build`, `train`, `eval`, `build_and_train`. |
+| `SIZE` | `5` | `10` | The grid size of the Nonogram (e.g., `5` for 5x5, `10` for 10x10). |
+| `TRAIN_NUM` | `1000` | `50000` | Number of samples to use for training (subsampling). |
+| `TEST_NUM` | `200` | `5000` | Number of samples to use for testing/validation. |
+| `EPOCHS` | `100` | `50` | Total number of training epochs. |
+| `BATCH` | `256` | `128` | Batch size per step. |
+| `LR` | `5e-5` | `1e-4` | Learning rate. |
+| `EVAL_INT` | `10` | `5` | How often (in epochs) to run evaluation and log images. |
+| `RAW_DATA_PATH` | - | `../../NonoDataset` | Path to the raw downloaded `NonoDataset`. |
+| `PROC_DATA_PATH` | - | `data/nonogram_10x10` | Path where the processed 5D tensors should be saved. |
+
+
 
 
