@@ -36,6 +36,38 @@ As mentioned, this code is based on the original TRM implementation. The main ad
 | `evaluator.py` | **Evaluation & Visualization:** Handles the evaluation loop, calculates metrics, and generates **visual plots** of the Nonogram boards (with clues) to display in WandB. |
 | `losses.py` | **Loss Functions:** Defines Binary Cross Entropy logic. Computes the reconstruction loss and accuracy metrics. |
 
+## 💻 Usage
 
+There are two ways to run the project: using the provided Jupyter Notebook (recommended for Google Colab) or running the automation script directly in a terminal.
+
+### 🛠️ Prerequisites
+Before running, ensure you have:
+1.  **Weights & Biases Account:** The project logs training metrics to [WandB](https://wandb.ai/). You will need your API key.
+2.  **GPU Support:** The training script automatically detects CUDA devices. At least one GPU is required.
+
+---
+
+### Option 1: Using the Notebook (Recommended)
+The file `Project_run.ipynb` is designed to handle the entire setup pipeline, including fetching the dataset and setting up the environment.
+
+1.  Open `Project_run.ipynb` in Google Colab or a Jupyter environment.
+2.  **Set Secrets:** If using Colab, add the following to your "Secrets" (key icon):
+    * `GITHUB_TOKEN`: Your GitHub personal access token (to clone the repo).
+    * `WANDB_API_KEY`: Your Weights & Biases API key.
+3.  **Run All Cells:** The notebook will:
+    * Clone the repository.
+    * Install dependencies via `uv`.
+    * Download the dataset (`NonoDataset`).
+    * Execute the `speedrun.sh` script to build, train, and evaluate the model.
+
+---
+
+### Option 2: Using the Automation Script (`speedrun.sh`)
+For advanced users or local terminal execution, `speedrun.sh` provides a "one-click" solution with customizable parameters.
+
+**Basic Command:**
+```bash
+chmod +x speedrun.sh
+./speedrun.sh [TASK] [SIZE] [TRAIN_NUM] [TEST_NUM] [EPOCHS] [BATCH] [LR] [EVAL_INT] [RAW_DATA_PATH] [PROC_DATA_PATH]
 
 
