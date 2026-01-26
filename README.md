@@ -28,6 +28,7 @@ As mentioned, this code is based on the original TRM implementation. The main ad
 | File name | Purpose |
 | :--- | :--- |
 | `Project_run.ipynb` | **Main Application:** Jupyter Notebook containing the full pipeline (Pulling from git directories, Dataset download, Training, Testing). |
+| `download_dataset.py` | **Dataset Restructuring:** Handles loading mixed file formats (.zip, .npz, .npy) from the source dataset we mentioned above. |
 | `speedrun.sh` | **Automation Script:** A bash script that handles the entire pipeline: building the dataset, training the model, and running evaluations. |
 | `build_nonogram_dataset.py` | **Data Preprocessing:** Converts raw Nonogram puzzles into the specific tensor format required by the model. |
 | `trm.py` | Contains the class definitions for the **TRM (Tiny Recursive Model)** architecture, modified for Nonograms. |
