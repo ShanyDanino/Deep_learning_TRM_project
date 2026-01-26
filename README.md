@@ -70,4 +70,16 @@ For advanced users or local terminal execution, `speedrun.sh` provides a "one-cl
 chmod +x speedrun.sh
 ./speedrun.sh [TASK] [SIZE] [TRAIN_NUM] [TEST_NUM] [EPOCHS] [BATCH] [LR] [EVAL_INT] [RAW_DATA_PATH] [PROC_DATA_PATH]
 
+Parameter,Default,Example,Description
+TASK,train,build_and_train,"The operation to perform. Options: build, train, eval, build_and_train."
+SIZE,5,10,"The grid size of the Nonogram (e.g., 5 for 5x5, 10 for 10x10)."
+TRAIN_NUM,1000,50000,Number of samples to use for training (subsampling).
+TEST_NUM,200,5000,Number of samples to use for testing/validation.
+EPOCHS,100,50,Total number of training epochs.
+BATCH,256,128,Batch size per step.
+LR,5e-5,1e-4,Learning rate.
+EVAL_INT,10,5,How often (in epochs) to run evaluation and log images.
+RAW_DATA,-,../../NonoDataset,Path to the raw downloaded NonoDataset.
+PROC_DATA,-,data/nonogram_10x10,Path where the processed 5D tensors should be saved.
+
 
