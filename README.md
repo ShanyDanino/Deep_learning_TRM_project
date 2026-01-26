@@ -7,6 +7,7 @@
 
 ## 📌 Project Overview
 The goal of this project is to develop a recursive deep learning model capable of solving Nonograms—logic puzzles defined by row and column constraints.  NonoReason utilizes a **recursive reasoning architecture**. It solves the grid step-by-step, constantly cross-referencing constraints to verify and deduce the next move.
+![Training_process](https://github.com/user-attachments/assets/ff26ad8c-eb5a-45d4-9338-0206d07076c1)
 
 ## 📊 Dataset
 We utilize the Nonogram dataset originally published in the paper:
