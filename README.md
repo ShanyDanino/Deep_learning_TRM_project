@@ -29,9 +29,11 @@ As mentioned, this code is based on the original TRM implementation. The main ad
 | `Project_run.ipynb` | **Main Application:** Jupyter Notebook containing the full pipeline (Pulling from git directories, Dataset download, Training, Testing). |
 | `speedrun.sh` | **Automation Script:** A bash script that handles the entire pipeline: building the dataset, training the model, and running evaluations. |
 | `build_nonogram_dataset.py` | **Data Preprocessing:** Converts raw Nonogram puzzles into the specific tensor format required by the model. |
-| `trm.py` | Contains the class definitions for the **TRM (Tiny Recursive Model)** architecture, modified for Nonograms |
-| `train.py` | **Training Script:** The main entry point for training. Handles **Hydra** configuration, distributed training, **WandB** logging, ect. |
+| `trm.py` | Contains the class definitions for the **TRM (Tiny Recursive Model)** architecture, modified for Nonograms. |
+| `train.py` | **Training Script:** The main entry point for training. Handles **Hydra** configuration, distributed training, **WandB** logging, etc. |
 | `evaluator.py` | **Evaluation & Visualization:** Handles the evaluation loop, calculates metrics, and generates **visual plots** of the Nonogram boards (with clues) to display in WandB. |
-| `losses.py` | **Loss Functions:** Defines Binary Cross Entropy logic. Computes the reconstruction loss, halting probability loss (`q_halt`), and accuracy metrics. |
+| `losses.py` | **Loss Functions:** Defines Binary Cross Entropy logic. Computes the reconstruction loss and accuracy metrics. |
+
+
 
 
