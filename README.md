@@ -88,6 +88,16 @@ chmod +x speedrun.sh
 | `RAW_DATA_PATH` | - | `../../NonoDataset` | Path to the raw downloaded `NonoDataset`. |
 | `PROC_DATA_PATH` | - | `data/nonogram_10x10` | Path where the processed 5D tensors should be saved. |
 
+## 📚 References
 
+This project builds upon the following academic works:
+
+**1. Model Architecture (TRM)**
+> **A. Jolicoeur-Martineau**, *"Less is more: Recursive reasoning with tiny networks"*, arXiv preprint arXiv:2510.04871 (2025).
+> * This paper introduced the Tiny Recursive Model architecture used in this project.
+
+**2. Nonogram Dataset**
+> **Rubio, José María Buades, et al.**, *"Solving nonograms using neural networks"*, Entertainment Computing 50 (2024): 100652.
+> * We utilized the 5x5 and 10x10 datasets published in this work.
 
 
