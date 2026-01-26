@@ -71,6 +71,7 @@ Before running `speedrun.sh`, you should download the dataset using `download_da
 ```bash
 chmod +x speedrun.sh
 ./speedrun.sh [TASK] [SIZE] [TRAIN_NUM] [TEST_NUM] [EPOCHS] [BATCH] [LR] [EVAL_INT] [RAW_DATA_PATH] [PROC_DATA_PATH]
+```
 
 ### Parameters Examples
 
