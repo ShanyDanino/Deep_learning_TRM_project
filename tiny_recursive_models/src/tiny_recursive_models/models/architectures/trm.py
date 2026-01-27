@@ -183,9 +183,6 @@ class TinyRecursiveReasoningModel_ACTV1_Inner(nn.Module):
         clues_out = self.clue_encoder(flattened_clues)
         grid_embedding = clues_out.reshape(self.config.batch_size, (self.config.size ** 2), self.config.hidden_size)
 
-        # Token embedding
-        #grid_embedding = self.embed_tokens(clues_emb.to(torch.int32))
-
         # Puzzle embeddings
         if self.config.puzzle_emb_ndim > 0:
             puzzle_embedding = self.puzzle_emb(puzzle_identifiers)
