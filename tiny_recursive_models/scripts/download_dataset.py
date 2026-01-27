@@ -42,7 +42,6 @@ def load_npy_data(path):
 
     elif path.endswith('.npz'):
         with np.load(path) as data:
-            # Return the first array found (usually 'arr_0' or similar)
             key = list(data.keys())[0]
             return data[key]
 
@@ -121,5 +120,6 @@ def rearrange_dataset():
     y_15_full = np.concatenate([y_15_train, y_15_test])
 
     save_split("15x15", x_15_full, y_15_full)
+
 
     print("\nProcessing complete. Check 'uniform_dataset/' folder.")
