@@ -33,11 +33,11 @@ def plot_nonogram_combined(board, clues_grid, title="Nonogram"):
 
     rows, cols = board.shape
 
-    # Extract Clues ---
+    # Extract Clues
     row_clues = [clues_grid[r, 0][0] for r in range(rows)]
     col_clues = [clues_grid[0, c][1] for c in range(cols)]
 
-    # Plotting Logic ---
+    # Plotting Logic
     fig, ax = plt.subplots(figsize=(cols / 1.5 + 2, rows / 1.5 + 2))
     ax.imshow(1 - board, cmap='gray', vmin=0, vmax=1, interpolation='nearest')
 
@@ -53,15 +53,13 @@ def plot_nonogram_combined(board, clues_grid, title="Nonogram"):
     ax.tick_params(axis='both', which='both', left=False, bottom=False,
                    labelleft=False, labelbottom=False)
 
-    # Render Clues (Filtering Zeros) ---
+    # Render Clues (Filtering Zeros)
     for r in range(rows):
-        # Filter out zeros before joining
         cleaned_clues = [str(x) for x in row_clues[r] if x > 0]
         txt = " ".join(cleaned_clues)
         ax.text(-0.6, r, txt, ha='right', va='center', fontsize=16, fontweight='bold')
 
     for c in range(cols):
-        # Filter out zeros before joining
         cleaned_clues = [str(x) for x in col_clues[c] if x > 0]
         txt = "\n".join(cleaned_clues)
         ax.text(c, -0.6, txt, ha='center', va='bottom', fontsize=16, fontweight='bold')
