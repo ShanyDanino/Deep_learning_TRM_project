@@ -24,14 +24,9 @@ def binary_cross_entropy(logits, labels, ignore_index: int = -100, valid_mask=No
     """
     if valid_mask is None:
         valid_mask = (labels != ignore_index)
-
-    # Convert 2 logits to 1 scalar (Logit for "1" - Logit for "0")
-    # Creates a single score: Positive means "Model thinks it's Full"
     pred_logits = logits[..., 1] - logits[..., 0]
-
     safe_labels = torch.where(valid_mask, labels, 0).float()
     loss = F.binary_cross_entropy_with_logits(pred_logits, safe_labels, reduction='none')
-
     # Zero out loss for padding/ignored tokens so they won't count
     return torch.where(valid_mask, loss, 0.0)
 
