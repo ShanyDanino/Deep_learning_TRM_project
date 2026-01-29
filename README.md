@@ -2,7 +2,7 @@
 ​
 **NonoReason** explores the potential of compact AI models to solve Nonograms, a logic puzzle, through recursive reasoning.
 
-> **Note:** This project is based on the **TRM (Tiny Recursive Model)** architecture and utilizes the * [original codebase](https://github.com/alphaXiv/paper-implementations/tree/main/tiny_recursive_models) presented in the paper:
+> **Note:** This project is based on the **TRM (Tiny Recursive Model)** architecture and utilizes the [original codebase](https://github.com/alphaXiv/paper-implementations/tree/main/tiny_recursive_models) presented in the paper:
 > **A. Jolicoeur-Martineau**, *"Less is more: Recursive reasoning with tiny networks"*, arXiv preprint arXiv:2510.04871 (2025).
 See the [References](#-references) section below for more details.
 
