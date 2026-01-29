@@ -4,6 +4,7 @@
 
 > **Note:** This project is based on the **TRM (Tiny Recursive Model)** architecture and utilizes the original codebase presented in the paper:
 > **A. Jolicoeur-Martineau**, *"Less is more: Recursive reasoning with tiny networks"*, arXiv preprint arXiv:2510.04871 (2025).
+See the [References](#-references) section below for more details.
 
 ## 📌 Project Overview
 The goal of this project is to develop a recursive deep learning model capable of solving Nonograms-logic puzzles defined by row and column constraints. NonoReason utilizes a **recursive reasoning architecture**. It solves the grid step-by-step, constantly cross-referencing constraints to verify and deduce the next move.
@@ -104,5 +105,9 @@ This project builds upon the following academic works:
 **2. Nonogram Dataset**
 > **Rubio, José María Buades, et al.**, *"Solving nonograms using neural networks"*, Entertainment Computing 50 (2024): 100652.
 > * We utilized the 5x5 and 10x10 datasets published in this work.
+
+**3. Original Codebase**
+> Our implementation is based on the code provided in the **alphaXiv paper implementations** repository:
+> * [**Tiny Recursive Models (GitHub)**](https://github.com/alphaXiv/paper-implementations/tree/main/tiny_recursive_models)
 
 
